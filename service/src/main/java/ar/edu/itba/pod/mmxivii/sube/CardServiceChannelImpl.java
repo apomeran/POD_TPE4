@@ -10,9 +10,9 @@ import ar.edu.itba.pod.mmxivii.sube.common.CardRegistry;
 import ar.edu.itba.pod.mmxivii.sube.common.CardService;
 import ar.edu.itba.pod.mmxivii.sube.common.CardServiceRegistry;
 
-public class ChannelReceiver extends ReceiverAdapter implements CardService {
+public class CardServiceChannelImpl extends ReceiverAdapter implements CardService {
 
-	public ChannelReceiver(JChannel node, CardRegistry cardRegistry,
+	public CardServiceChannelImpl(JChannel node, CardRegistry cardRegistry,
 			CardServiceRegistry cardServiceRegistry) {
 		// TODO Auto-generated constructor stub
 	}

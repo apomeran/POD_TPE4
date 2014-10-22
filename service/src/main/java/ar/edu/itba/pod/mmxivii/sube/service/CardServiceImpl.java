@@ -6,6 +6,8 @@ import java.rmi.server.UnicastRemoteObject;
 
 import javax.annotation.Nonnull;
 
+import org.jgroups.ReceiverAdapter;
+
 import ar.edu.itba.pod.mmxivii.sube.common.CardRegistry;
 import ar.edu.itba.pod.mmxivii.sube.common.CardService;
 

@@ -19,7 +19,7 @@ import ar.edu.itba.pod.mmxivii.sube.service.CardServiceImpl;
 
 public class MainCache extends BaseMain {
 	private CardServiceRegistry cardServiceRegistry;
-	private CardServiceImpl cardService;
+	private CardServiceImpl bypassCardService;
 	private CardRegistry cardRegistry;
 
 	private MainCache(@Nonnull String[] args) throws RemoteException,
@@ -30,12 +30,16 @@ public class MainCache extends BaseMain {
 		cardServiceRegistry = Utils.lookupObject(CARD_SERVICE_REGISTRY_BIND);
 		try {
 			JChannel node = new JChannel();
-			ChannelReceiver myCardService = new ChannelReceiver(node,
-					cardRegistry, cardServiceRegistry);
-			cardService = new CardServiceImpl(cardRegistry, myCardService);
+			CardServiceChannelImpl myCardService = new CardServiceChannelImpl(
+					node, cardRegistry, cardServiceRegistry);
+			bypassCardService = new CardServiceImpl(cardRegistry, myCardService);
 			node.setReceiver(myCardService);
 			node.connect("jgroup");
-			cardServiceRegistry.registerService(cardService); // WE SHOULD USE MY CARD SERVICE INSTEAD
+			cardServiceRegistry.registerService(bypassCardService); // WE SHOULD
+																	// USE MY
+																	// CARD
+																	// SERVICE
+																	// INSTEAD BUT ITS NOT UNICAST
 		} catch (Exception e) {
 		}
 
