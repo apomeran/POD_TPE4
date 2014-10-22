@@ -6,8 +6,6 @@ import java.rmi.server.UnicastRemoteObject;
 
 import javax.annotation.Nonnull;
 
-import org.jgroups.ReceiverAdapter;
-
 import ar.edu.itba.pod.mmxivii.sube.common.CardRegistry;
 import ar.edu.itba.pod.mmxivii.sube.common.CardService;
 
@@ -17,29 +15,29 @@ public class CardServiceImpl extends UnicastRemoteObject implements CardService 
 
 	@Nonnull
 	private CardRegistry cardRegistry;
-	private CardService override; // THIS SHOULD BE REPLACED
+	private CardService service; // THIS IS THE ACTUAL SERVICE USED
 
 	public CardServiceImpl(@Nonnull CardRegistry cardRegistry,
 			CardService override) throws RemoteException {
 		super(0);
-		this.override = override;
+		this.service = override;
 
 	}
 
 	@Override
 	public double getCardBalance(@Nonnull UID id) throws RemoteException {
-		return override.getCardBalance(id);
+		return service.getCardBalance(id);
 	}
 
 	@Override
 	public double travel(@Nonnull UID id, @Nonnull String description,
 			double amount) throws RemoteException {
-		return override.travel(id, description, amount);
+		return service.travel(id, description, amount);
 	}
 
 	@Override
 	public double recharge(@Nonnull UID id, @Nonnull String description,
 			double amount) throws RemoteException {
-		return override.recharge(id, description, amount);
+		return service.recharge(id, description, amount);
 	}
 }
