@@ -89,20 +89,62 @@ public class CardServiceChannelImpl extends ReceiverAdapter implements
 			return uData.getBalance();
 		} catch (Exception e) {
 		}
-		return -1; // ERROR
+		return -1; // SHOULD NOT HAPPEN-
 	}
 
 	@Override
 	public double travel(UID id, String description, double amount)
 			throws RemoteException {
-		// TODO Auto-generated method stub
+
+		// NEED TO CHECK IF AMOUNT ACCOMPLISHES $ARS FORMAT
+
+		//
+		UserData uData = cachedUserData.get(id);
+		if (uData != null) {
+			if (uData.getBalance() >= amount)
+				uData.addBalance(-amount);
+			else
+				return CardRegistry.OPERATION_NOT_PERMITTED_BY_BALANCE;
+		} else {
+			uData = new UserData(cardRegistry.getCardBalance(id));
+			CacheRequest c = new CacheRequest(OperationType.TRAVEL, id,
+					uData.getBalance());
+			try {
+				channel.send(new Message().setObject(c));
+				cachedUserData.put(id, uData);
+				return uData.getBalance();
+			} catch (Exception e) {
+			}
+		}
+
 		return 0;
 	}
 
+	@SuppressWarnings("static-access")
 	@Override
 	public double recharge(UID id, String description, double amount)
 			throws RemoteException {
-		// TODO Auto-generated method stub
+		// NEED TO CHECK IF AMOUNT ACCOMPLISHES $ARS FORMAT
+
+		//
+		UserData uData = cachedUserData.get(id);
+		if (uData != null) {
+			if (uData.getBalance() + amount < cardRegistry.MAX_BALANCE)
+				uData.addBalance(amount);
+			else
+				return CardRegistry.OPERATION_NOT_PERMITTED_BY_BALANCE;
+		} else {
+			uData = new UserData(cardRegistry.getCardBalance(id));
+			CacheRequest c = new CacheRequest(OperationType.RECHARGE, id,
+					uData.getBalance());
+			try {
+				channel.send(new Message().setObject(c));
+				cachedUserData.put(id, uData);
+				return uData.getBalance();
+			} catch (Exception e) {
+			}
+		}
+
 		return 0;
 	}
 
