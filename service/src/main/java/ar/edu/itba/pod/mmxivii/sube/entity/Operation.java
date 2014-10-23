@@ -1,18 +1,19 @@
 package ar.edu.itba.pod.mmxivii.sube.entity;
 
-import java.io.Serializable;
 import java.util.Date;
 
-public class Operation implements Comparable<Operation>, Serializable {
+public class Operation implements Comparable<Operation> {
 
-	/**
-	 * 
-	 */
-	private static final long serialVersionUID = 7742645122840050032L;
 
 	private OperationType type;
 	private double amount;
 	private Date timestamp;
+
+	public Operation(OperationType opType, double amount) {
+		this.type = opType;
+		this.amount = amount;
+		this.timestamp = new Date();
+	}
 
 	@Override
 	public int compareTo(Operation otherOperation) {
