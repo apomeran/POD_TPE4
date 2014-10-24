@@ -8,14 +8,15 @@ import java.util.Map;
 import org.jgroups.JChannel;
 import org.jgroups.Message;
 import org.jgroups.ReceiverAdapter;
-
-import com.google.common.cache.CacheStats;
+import org.jgroups.View;
 
 import ar.edu.itba.pod.mmxivii.sube.common.CardRegistry;
 import ar.edu.itba.pod.mmxivii.sube.common.CardService;
 import ar.edu.itba.pod.mmxivii.sube.common.CardServiceRegistry;
+import ar.edu.itba.pod.mmxivii.sube.common.Utils;
 import ar.edu.itba.pod.mmxivii.sube.entity.OperationType;
 import ar.edu.itba.pod.mmxivii.sube.entity.UserData;
+import ar.edu.itba.pod.mmxivii.sube.service.CardServiceImpl;
 
 public class CardServiceChannelImpl extends ReceiverAdapter implements
 		CardService {
@@ -24,6 +25,7 @@ public class CardServiceChannelImpl extends ReceiverAdapter implements
 	private CardRegistry cardRegistry;
 	private CardServiceRegistry cardServiceRegistry;
 	private Map<UID, UserData> cachedUserData = new HashMap<UID, UserData>();
+	private boolean sent = false;
 
 	public CardServiceChannelImpl(JChannel channel, CardRegistry cardRegistry,
 			CardServiceRegistry cardServiceRegistry) {
@@ -34,19 +36,41 @@ public class CardServiceChannelImpl extends ReceiverAdapter implements
 
 	public void receive(Message msg) {
 		if (!msg.getSrc().equals(channel.getAddress())) {
-
 			if (msg.getObject() instanceof CacheRequest) {
 				CacheRequest r = (CacheRequest) msg.getObject();
-				applyOperation(r);
-
+				applyCacheOperation(r);
 			} else {
 				if (msg.getObject() instanceof SyncRequest) {
+					SyncRequest s = (SyncRequest) msg.getObject();
+					applySyncOperation(s);
 				}
 			}
 		}
 	}
 
-	private void applyOperation(CacheRequest r) {
+	@Override
+	public void viewAccepted(View v) {
+		if (v.getMembers().size() == 1) {
+			try {
+				cardServiceRegistry.registerService(new CardServiceImpl(
+						cardRegistry, this));
+				System.out.println("DADO DE ALTA FRENTE AL BALANCER");
+			} catch (RemoteException e) {
+			}
+			sent = true;
+		}
+	}
+
+	private void applySyncOperation(SyncRequest s) {
+		switch (s.getOperationType()) {
+		case REQUEST:
+			break;
+		case RESPONSE:
+			break;
+		}
+	}
+
+	private void applyCacheOperation(CacheRequest r) {
 		switch (r.getOperationType()) {
 		case TRAVEL:
 			applyTravel(r.getUid(), r.getBalance());
@@ -62,14 +86,23 @@ public class CardServiceChannelImpl extends ReceiverAdapter implements
 	}
 
 	private void applyRecharge(UID uid, double amount) {
+		// NEED TO CHECK IF AMOUNT ACCOMPLISHES $ARS FORMAT
+		Utils.assertAmount(amount);
+		//
 		cachedUserData.get(uid).addBalance(amount);
 	}
 
 	private void newUserData(UID uid, double amount) {
+		// NEED TO CHECK IF AMOUNT ACCOMPLISHES $ARS FORMAT
+		Utils.assertAmount(amount);
+		//
 		cachedUserData.put(uid, new UserData(amount));
 	}
 
 	private void applyTravel(UID uid, double amount) {
+		// NEED TO CHECK IF AMOUNT ACCOMPLISHES $ARS FORMAT
+		Utils.assertAmount(amount);
+		//
 		cachedUserData.get(uid).addBalance(-amount);
 	}
 
@@ -97,7 +130,7 @@ public class CardServiceChannelImpl extends ReceiverAdapter implements
 			throws RemoteException {
 
 		// NEED TO CHECK IF AMOUNT ACCOMPLISHES $ARS FORMAT
-
+		Utils.assertAmount(amount);
 		//
 		UserData uData = cachedUserData.get(id);
 		if (uData != null) {
@@ -117,7 +150,7 @@ public class CardServiceChannelImpl extends ReceiverAdapter implements
 			}
 		}
 
-		return 0;
+		return -1; // SHOULD NOT HAPPEN-
 	}
 
 	@SuppressWarnings("static-access")
@@ -125,7 +158,7 @@ public class CardServiceChannelImpl extends ReceiverAdapter implements
 	public double recharge(UID id, String description, double amount)
 			throws RemoteException {
 		// NEED TO CHECK IF AMOUNT ACCOMPLISHES $ARS FORMAT
-
+		Utils.assertAmount(amount);
 		//
 		UserData uData = cachedUserData.get(id);
 		if (uData != null) {
@@ -145,7 +178,7 @@ public class CardServiceChannelImpl extends ReceiverAdapter implements
 			}
 		}
 
-		return 0;
+		return -1; // SHOULD NOT HAPPEN-
 	}
 
 }

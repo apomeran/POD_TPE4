@@ -18,8 +18,7 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
-public class Utils
-{
+public class Utils {
 
 	public static final String MAX_THREADS_JAVA_PROPERTY = "sun.rmi.transport.tcp.maxConnectionThreads";
 	public static final int MIN_DELAY = 200;
@@ -51,15 +50,16 @@ public class Utils
 	public static final String CARD_CLIENT_BIND = "cardClient";
 	private static Registry rmiRegistry = null;
 
-	private Utils() {}
+	private Utils() {
+	}
 
 	@Nonnull
-	public static Options buildOptions(@Nonnull String[] ... options)
-	{
+	public static Options buildOptions(@Nonnull String[]... options) {
 		final Options result = new Options();
 		result.addOption("help", false, "Help");
 		for (String[] option : options) {
-			if (option.length != 3) throw new IllegalArgumentException("invalid options");
+			if (option.length != 3)
+				throw new IllegalArgumentException("invalid options");
 			final String opt = option[0];
 			final String longOpt = option[1];
 			final boolean hasArg = Boolean.parseBoolean(option[2]);
@@ -70,19 +70,19 @@ public class Utils
 	}
 
 	@Nonnull
-	public static CommandLine parseArguments(@Nonnull final Options options, final String help, @Nonnull final String[] args)
-	{
+	public static CommandLine parseArguments(@Nonnull final Options options,
+			final String help, @Nonnull final String[] args) {
 		try {
 			// parse the command line arguments
-			final CommandLine commandLine = new BasicParser().parse(options, args, false);
+			final CommandLine commandLine = new BasicParser().parse(options,
+					args, false);
 
 			if (commandLine.hasOption("help")) {
 				new HelpFormatter().printHelp(help, options);
 				System.exit(HELP_EXIT_CODE);
 			}
 			return commandLine;
-		}
-		catch (ParseException e) {
+		} catch (ParseException e) {
 			// oops, something went wrong
 			System.err.println("Parsing failed.  Reason: " + e.getMessage());
 			System.exit(PARSE_FAILED_EXIT_CODE);
@@ -91,68 +91,80 @@ public class Utils
 	}
 
 	@Nonnull
-	public static Registry createRegistry(final int port)
-	{
+	public static Registry createRegistry(final int port) {
 		try {
 			final Registry registry = LocateRegistry.createRegistry(port);
-			System.out.println(String.format("Created RMI Registry on %s", port));
+			System.out.println(String
+					.format("Created RMI Registry on %s", port));
 			return registry;
 		} catch (RemoteException e) {
-			System.err.println("Failed to create RMI Registry. Reason: " + e.getMessage());
+			System.err.println("Failed to create RMI Registry. Reason: "
+					+ e.getMessage());
 			System.exit(RMI_FAILED_EXIT_CODE);
 			throw new RuntimeException(e);
 		}
 	}
 
 	@Nonnull
-	public static Registry getRegistry(@Nullable final String host, final int port)
-	{
+	public static Registry getRegistry(@Nullable final String host,
+			final int port) {
 		try {
 			rmiRegistry = LocateRegistry.getRegistry(host, port);
-			System.out.println(String.format("Connected to RMI Registry on %s:%s", host, port));
+			System.out.println(String.format(
+					"Connected to RMI Registry on %s:%s", host, port));
 			return rmiRegistry;
 		} catch (RemoteException e) {
-			System.err.println("Failed to get RMI Registry. Reason: " + e.getMessage());
+			System.err.println("Failed to get RMI Registry. Reason: "
+					+ e.getMessage());
 			System.exit(RMI_FAILED_EXIT_CODE);
 			throw new RuntimeException(e);
 		}
 	}
 
-	public static void bindObject(@Nonnull Registry registry, @Nonnull final String name, @Nonnull final Remote remote) throws AlreadyBoundException
-	{
+	public static void bindObject(@Nonnull Registry registry,
+			@Nonnull final String name, @Nonnull final Remote remote)
+			throws AlreadyBoundException {
 		try {
-			final Remote exportObject = UnicastRemoteObject.exportObject(remote, 0);
+			final Remote exportObject = UnicastRemoteObject.exportObject(
+					remote, 0);
 			registry.bind(name, exportObject);
 		} catch (RemoteException e) {
-			System.err.println("Failed to bind Remote Object in Registry. Reason: " + e.getMessage());
+			System.err
+					.println("Failed to bind Remote Object in Registry. Reason: "
+							+ e.getMessage());
 			System.exit(RMI_FAILED_EXIT_CODE);
 			throw new RuntimeException(e);
 		}
 	}
 
 	@Nonnull
-	public static <T extends Remote> T lookupObject(@Nonnull final String name) throws NotBoundException
-	{
+	public static <T extends Remote> T lookupObject(@Nonnull final String name)
+			throws NotBoundException {
 		try {
-			if (rmiRegistry == null) throw new NullPointerException("RMI Registry not set");
-			//noinspection unchecked
+			if (rmiRegistry == null)
+				throw new NullPointerException("RMI Registry not set");
+			// noinspection unchecked
 			return (T) rmiRegistry.lookup(name);
 		} catch (RemoteException e) {
-			System.err.println("Failed to lookup Remote Object in Registry. Reason: " + e.getMessage());
+			System.err
+					.println("Failed to lookup Remote Object in Registry. Reason: "
+							+ e.getMessage());
 			System.exit(RMI_FAILED_EXIT_CODE);
 			throw new RuntimeException(e);
 		}
 	}
 
-	/** Valida que el double tenga como mucho dos decimales y su valor absoluto sea menor a 100*/
-	public static void assertAmount(double amount)
-	{
-		if (Math.rint(amount * 100) != (amount * 100) || Math.abs(amount) > 100) throw new IllegalArgumentException("Invalid amount " + amount);
+	/**
+	 * Valida que el double tenga como mucho dos decimales y su valor absoluto
+	 * sea menor a 100
+	 */
+	public static void assertAmount(double amount) {
+		if (Math.rint(amount * 100) != (amount * 100) || Math.abs(amount) > 100)
+			throw new IllegalArgumentException("Invalid amount " + amount);
 	}
 
-	public static String assertText(@Nonnull final String text)
-	{
-		for (int i=0; i< text.length(); i++) {
+	public static String assertText(@Nonnull final String text) {
+		for (int i = 0; i < text.length(); i++) {
 			final char c = text.charAt(i);
 			if (!Character.isDigit(c) && !Character.isLetter(c))
 				throw new IllegalArgumentException("Invalid text " + text);
@@ -167,18 +179,19 @@ public class Utils
 		return reference;
 	}
 
-	public static void skipDelay(final boolean value)
-	{
+	public static void skipDelay(final boolean value) {
 		skipDelay = value;
 	}
 
-	public static void delay()
-	{
-		if (!skipDelay) try { Thread.sleep(RANDOM.nextInt(MAX_DELTA) + MIN_DELAY); } catch (InterruptedException ignore) {}
+	public static void delay() {
+		if (!skipDelay)
+			try {
+				Thread.sleep(RANDOM.nextInt(MAX_DELTA) + MIN_DELAY);
+			} catch (InterruptedException ignore) {
+			}
 	}
 
-	public interface Invoke
-	{
+	public interface Invoke {
 
 	}
 }

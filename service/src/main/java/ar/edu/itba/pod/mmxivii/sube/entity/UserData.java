@@ -4,15 +4,15 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
-public class UserData implements Serializable{
+public class UserData implements Serializable {
 
-	
 	private static final long serialVersionUID = 1L;
 	private double balance;
 	private List<Operation> operations = new ArrayList<Operation>();
 
-	
-	public UserData(){}
+	public UserData() {
+	}
+
 	public UserData(double balance) {
 		this.balance = balance;
 	}
