@@ -13,6 +13,12 @@ public class SyncRequest implements Serializable {
 	/**
 	 * 
 	 */
+
+	public SyncRequest(Map<UID, UserData> cachedUserData, SyncType t) {
+		this.cachedUserData = cachedUserData;
+		this.type = t;
+	}
+
 	private static final long serialVersionUID = 1L;
 	private SyncType type;
 

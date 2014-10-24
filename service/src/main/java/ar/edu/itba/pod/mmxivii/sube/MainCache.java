@@ -6,6 +6,7 @@ import static ar.edu.itba.pod.mmxivii.sube.common.Utils.CARD_SERVICE_REGISTRY_BI
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.util.Scanner;
+import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nonnull;
 
@@ -28,19 +29,31 @@ public class MainCache extends BaseMain {
 		getRegistry();
 		cardRegistry = Utils.lookupObject(CARD_REGISTRY_BIND);
 		cardServiceRegistry = Utils.lookupObject(CARD_SERVICE_REGISTRY_BIND);
-		try {
-			JChannel node = new JChannel();
-			CardServiceChannelImpl myCardService = new CardServiceChannelImpl(
-					node, cardRegistry, cardServiceRegistry);
-			bypassCardService = new CardServiceImpl(cardRegistry, myCardService);
-			node.setReceiver(myCardService);
-			node.connect("jgroup");
-			cardServiceRegistry.registerService(bypassCardService); // WE SHOULD
-																	// USE MY
-																	// CARD
-																	// SERVICE
-																	// INSTEAD BUT ITS NOT UNICAST
-		} catch (Exception e) {
+		int nodesCount = 1;
+		for (int n = 0; n < nodesCount; n++) {
+			try {
+				JChannel node = new JChannel();
+				node.setName("nodo_" + n);
+				CardServiceChannelImpl myCardService = new CardServiceChannelImpl(
+						node, cardRegistry, cardServiceRegistry);
+				bypassCardService = new CardServiceImpl(cardRegistry,
+						myCardService);
+				node.setReceiver(myCardService);
+				node.connect("cluster");
+				cardServiceRegistry.registerService(bypassCardService); // WE
+																		// SHOULD
+																		// USE
+																		// MY
+																		// CARD
+																		// SERVICE
+																		// INSTEAD
+																		// BUT
+																		// ITS
+																		// NOT
+																		// UNICAST
+				Thread.sleep(TimeUnit.SECONDS.toMillis(5));
+			} catch (Exception e) {
+			}
 		}
 
 	}

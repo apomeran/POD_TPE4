@@ -5,11 +5,13 @@ import java.rmi.server.UID;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.jgroups.Address;
 import org.jgroups.JChannel;
 import org.jgroups.Message;
 import org.jgroups.ReceiverAdapter;
 import org.jgroups.View;
 
+import ar.edu.itba.pod.mmxivii.sube.SyncRequest.SyncType;
 import ar.edu.itba.pod.mmxivii.sube.common.CardRegistry;
 import ar.edu.itba.pod.mmxivii.sube.common.CardService;
 import ar.edu.itba.pod.mmxivii.sube.common.CardServiceRegistry;
@@ -25,7 +27,7 @@ public class CardServiceChannelImpl extends ReceiverAdapter implements
 	private CardRegistry cardRegistry;
 	private CardServiceRegistry cardServiceRegistry;
 	private Map<UID, UserData> cachedUserData = new HashMap<UID, UserData>();
-	private boolean sent = false;
+	private boolean synchronized_node = false;
 
 	public CardServiceChannelImpl(JChannel channel, CardRegistry cardRegistry,
 			CardServiceRegistry cardServiceRegistry) {
@@ -42,7 +44,7 @@ public class CardServiceChannelImpl extends ReceiverAdapter implements
 			} else {
 				if (msg.getObject() instanceof SyncRequest) {
 					SyncRequest s = (SyncRequest) msg.getObject();
-					applySyncOperation(s);
+					applySyncOperation(s, msg.getSrc());
 				}
 			}
 		}
@@ -51,21 +53,50 @@ public class CardServiceChannelImpl extends ReceiverAdapter implements
 	@Override
 	public void viewAccepted(View v) {
 		if (v.getMembers().size() == 1) {
-			try {
-				cardServiceRegistry.registerService(new CardServiceImpl(
-						cardRegistry, this));
-				System.out.println("DADO DE ALTA FRENTE AL BALANCER");
-			} catch (RemoteException e) {
+			if (synchronized_node == false) {
+				try {
+					cardServiceRegistry.registerService(new CardServiceImpl(
+							cardRegistry, this));
+					System.out.println("DADO DE ALTA FRENTE AL BALANCER");
+				} catch (RemoteException e) {
+				}
+				synchronized_node = true;
 			}
-			sent = true;
+		} else {
+			int i = 0;
+			Address syncAddress = null;
+			while (v.getMembers().get(i) == channel.getAddress()) {
+				i++;
+			}
+			syncAddress = v.getMembers().get(i);
+			if (syncAddress != null)
+				try {
+					channel.send(new Message().setObject(new SyncRequest(
+							cachedUserData, SyncType.REQUEST)));
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
 		}
 	}
 
-	private void applySyncOperation(SyncRequest s) {
+	private void applySyncOperation(SyncRequest s, Address address) {
 		switch (s.getOperationType()) {
 		case REQUEST:
+			if (synchronized_node) {
+				try {
+					channel.send(address, new Message()
+							.setObject(new SyncRequest(cachedUserData,
+									SyncType.RESPONSE)));
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
 			break;
 		case RESPONSE:
+			if (!synchronized_node) {
+				cachedUserData.putAll(s.getCachedUserData());
+				synchronized_node = true;
+			}
 			break;
 		}
 	}
