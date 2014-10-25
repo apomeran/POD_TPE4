@@ -4,7 +4,6 @@ import java.util.Date;
 
 public class Operation implements Comparable<Operation> {
 
-
 	private OperationType type;
 	private double amount;
 	private Date timestamp;

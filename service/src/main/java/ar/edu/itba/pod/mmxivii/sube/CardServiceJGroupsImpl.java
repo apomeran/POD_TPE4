@@ -11,7 +11,7 @@ import org.jgroups.Message;
 import org.jgroups.ReceiverAdapter;
 import org.jgroups.View;
 
-import ar.edu.itba.pod.mmxivii.sube.SyncRequest.SyncType;
+import ar.edu.itba.pod.mmxivii.sube.pushDataMessage.SyncType;
 import ar.edu.itba.pod.mmxivii.sube.common.CardRegistry;
 import ar.edu.itba.pod.mmxivii.sube.common.CardService;
 import ar.edu.itba.pod.mmxivii.sube.common.CardServiceRegistry;
@@ -25,15 +25,22 @@ public class CardServiceJGroupsImpl extends ReceiverAdapter implements
 	private final JChannel channel;
 	private CardRegistry server;
 	private CardServiceRegistry balancer;
-	private Map<UID, UserData> cachedUserData = new HashMap<UID, UserData>();
-	private boolean synchronized_node = false;
-	private boolean registered = false;
+	private Map<UID, UserData> cachedUserData;
+	private boolean initialUpdate;
+	private boolean registered;
 
 	public CardServiceJGroupsImpl(JChannel channel, CardRegistry cardRegistry,
 			CardServiceRegistry cardServiceRegistry) {
 		this.channel = channel;
 		this.server = cardRegistry;
 		this.balancer = cardServiceRegistry;
+		this.cachedUserData = new HashMap<UID, UserData>(); // INITIALIZES DATA
+		this.registered = false;
+		this.initialUpdate = false;
+	}
+
+	public Address getCurrentAddress() {
+		return channel.getAddress();
 	}
 
 	public void receive(Message msg) {
@@ -42,8 +49,8 @@ public class CardServiceJGroupsImpl extends ReceiverAdapter implements
 				CacheRequest r = (CacheRequest) msg.getObject();
 				applyCacheOperation(r);
 			} else {
-				if (msg.getObject() instanceof SyncRequest) {
-					SyncRequest s = (SyncRequest) msg.getObject();
+				if (msg.getObject() instanceof pushDataMessage) {
+					pushDataMessage s = (pushDataMessage) msg.getObject();
 					applySyncOperation(s, msg.getSrc());
 				}
 			}
@@ -52,9 +59,17 @@ public class CardServiceJGroupsImpl extends ReceiverAdapter implements
 
 	@Override
 	public void suspect(Address mbr) {
-		// CHECK IF SOMEONE CRASHES. REMOVE FROM BALANCER
-		// GET WITH ADDRESS AND THEN
-		// balancer.unRegisterService();
+		try {
+			for (CardService serv : balancer.getServices()) {
+				CardServiceJGroupsImpl service = (CardServiceJGroupsImpl) serv;
+				if (service.getCurrentAddress().equals(mbr)) {
+					balancer.getServices().remove(service);
+					return;
+				}
+			}
+		} catch (RemoteException e) {
+			e.printStackTrace();
+		}
 	}
 
 	@Override
@@ -64,6 +79,7 @@ public class CardServiceJGroupsImpl extends ReceiverAdapter implements
 				try {
 					balancer.registerService(this);
 					registered = true;
+					initialUpdate = true;
 					System.out.println("Registered First Node");
 				} catch (RemoteException e) {
 				}
@@ -78,8 +94,8 @@ public class CardServiceJGroupsImpl extends ReceiverAdapter implements
 		Address syncAddress = getNodeAddress(v);
 		if (syncAddress != null)
 			try {
-				Message cachedData = new Message().setObject(new SyncRequest(
-						cachedUserData, SyncType.REQUEST));
+				Message cachedData = new Message().setObject(new pushDataMessage(
+						cachedUserData, SyncType.PUSH));
 				channel.send(cachedData);
 			} catch (Exception e) {
 				e.printStackTrace();
@@ -97,23 +113,20 @@ public class CardServiceJGroupsImpl extends ReceiverAdapter implements
 		return syncAddress;
 	}
 
-	private void applySyncOperation(SyncRequest s, Address address) {
+	private void applySyncOperation(pushDataMessage s, Address address) {
 		switch (s.getOperationType()) {
-		case REQUEST:
-			if (synchronized_node) {
+		case PUSH:
+			if (!initialUpdate) {
+				cachedUserData.putAll(s.getCachedUserData());
 				try {
-					channel.send(address, new Message()
-							.setObject(new SyncRequest(cachedUserData,
-									SyncType.RESPONSE)));
-				} catch (Exception e) {
+					balancer.registerService(this);
+					registered = true;
+					initialUpdate = true;
+				} catch (RemoteException e) {
 					e.printStackTrace();
 				}
-			}
-			break;
-		case RESPONSE:
-			if (!synchronized_node) {
-				cachedUserData.putAll(s.getCachedUserData());
-				synchronized_node = true;
+				
+				
 			}
 			break;
 		}

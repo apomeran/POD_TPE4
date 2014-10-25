@@ -7,10 +7,10 @@ import java.util.Map;
 
 import ar.edu.itba.pod.mmxivii.sube.entity.UserData;
 
-public class SyncRequest implements Serializable {
+public class pushDataMessage implements Serializable {
 	private Map<UID, UserData> cachedUserData = new HashMap<UID, UserData>();
 
-	public SyncRequest(Map<UID, UserData> cachedUserData, SyncType t) {
+	public pushDataMessage(Map<UID, UserData> cachedUserData, SyncType t) {
 		this.cachedUserData = cachedUserData;
 		this.type = t;
 	}
@@ -19,7 +19,7 @@ public class SyncRequest implements Serializable {
 	private SyncType type;
 
 	public static enum SyncType {
-		REQUEST, RESPONSE
+		PUSH
 	};
 
 	public SyncType getOperationType() {
@@ -29,7 +29,5 @@ public class SyncRequest implements Serializable {
 	public Map<UID, UserData> getCachedUserData() {
 		return cachedUserData;
 	}
-
-	
 
 }
