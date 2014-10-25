@@ -198,6 +198,8 @@ public class CardServiceJGroupsImpl extends ReceiverAdapter implements
 	public double getCardBalance(UID id) throws RemoteException {
 		UserData uData = cachedUserData.get(id);
 		if (uData != null) {
+			System.out.println("CardBalance ACK UserData Nº" + id);
+
 			return uData.getBalance();
 		}
 		uData = new UserData(server.getCardBalance(id));
@@ -207,6 +209,9 @@ public class CardServiceJGroupsImpl extends ReceiverAdapter implements
 		try {
 			channel.send(new Message().setObject(c));
 			cachedUserData.put(id, uData);
+			System.out
+					.println("CardBalance ACK via Server, now cached UserData Nº"
+							+ id);
 			return uData.getBalance();
 		} catch (Exception e) {
 		}
@@ -222,6 +227,8 @@ public class CardServiceJGroupsImpl extends ReceiverAdapter implements
 		//
 		UserData uData = cachedUserData.get(id);
 		if (uData != null) {
+			System.out.println("Travel ACK UserData Nº" + id);
+
 			return (uData.getBalance() >= amount) ? uData.addBalance(-amount)
 					: CardRegistry.OPERATION_NOT_PERMITTED_BY_BALANCE;
 
@@ -236,6 +243,8 @@ public class CardServiceJGroupsImpl extends ReceiverAdapter implements
 				e.printStackTrace();
 			}
 		}
+		System.out
+				.println("Travel ACK via Server, now cached UserData Nº" + id);
 		return uData.getBalance();
 
 	}
@@ -249,6 +258,7 @@ public class CardServiceJGroupsImpl extends ReceiverAdapter implements
 		//
 		UserData uData = cachedUserData.get(id);
 		if (uData != null) {
+			System.out.println("Recharged UserData Nº" + id);
 			return uData.getBalance() + amount < server.MAX_BALANCE ? uData
 					.addBalance(amount)
 					: CardRegistry.OPERATION_NOT_PERMITTED_BY_BALANCE;
@@ -264,6 +274,8 @@ public class CardServiceJGroupsImpl extends ReceiverAdapter implements
 				e.printStackTrace();
 			}
 		}
+		System.out.println("Recharged via Server, now cached UserData Nº" + id);
+
 		return uData.getBalance();
 	}
 
@@ -286,7 +298,7 @@ public class CardServiceJGroupsImpl extends ReceiverAdapter implements
 
 	private void updateServer() {
 		lastUpdate = LocalDateTime.now();
-
+		System.out.println("Server Updated");
 	}
 
 }
