@@ -10,6 +10,7 @@ import org.jgroups.JChannel;
 import org.jgroups.Message;
 import org.jgroups.ReceiverAdapter;
 import org.jgroups.View;
+import org.joda.time.LocalDateTime;
 
 import ar.edu.itba.pod.mmxivii.sube.pushDataMessage.SyncType;
 import ar.edu.itba.pod.mmxivii.sube.common.CardRegistry;
@@ -20,7 +21,7 @@ import ar.edu.itba.pod.mmxivii.sube.entity.OperationType;
 import ar.edu.itba.pod.mmxivii.sube.entity.UserData;
 
 public class CardServiceJGroupsImpl extends ReceiverAdapter implements
-		CardService {
+		CardService, Runnable {
 
 	private final JChannel channel;
 	private CardRegistry server;
@@ -28,6 +29,10 @@ public class CardServiceJGroupsImpl extends ReceiverAdapter implements
 	private Map<UID, UserData> cachedUserData;
 	private boolean initialUpdate;
 	private boolean registered;
+	private static final int MAX_TIMEOUT_SERVER_MINUTES = 2;
+	private LocalDateTime lastUpdate;
+	private boolean hasClusterUpdatedServer;
+	private Address pickedLeaderAddres;
 
 	public CardServiceJGroupsImpl(JChannel channel, CardRegistry cardRegistry,
 			CardServiceRegistry cardServiceRegistry) {
@@ -37,6 +42,7 @@ public class CardServiceJGroupsImpl extends ReceiverAdapter implements
 		this.cachedUserData = new HashMap<UID, UserData>(); // INITIALIZES DATA
 		this.registered = false;
 		this.initialUpdate = false;
+		this.hasClusterUpdatedServer = false;
 	}
 
 	public Address getCurrentAddress() {
@@ -52,9 +58,28 @@ public class CardServiceJGroupsImpl extends ReceiverAdapter implements
 				if (msg.getObject() instanceof pushDataMessage) {
 					pushDataMessage s = (pushDataMessage) msg.getObject();
 					applySyncOperation(s, msg.getSrc());
+				} else {
+					if (msg.getObject() instanceof pushServerUpdateMessage) {
+						pushServerUpdateMessage p = (pushServerUpdateMessage) msg
+								.getObject();
+						applyUpdateServerOperation(p, msg.getSrc());
+					}
 				}
 			}
 		}
+	}
+
+	private void applyUpdateServerOperation(pushServerUpdateMessage p,
+			Address src) {
+		switch (p.getOperationType()) {
+		case PICK:
+			this.pickedLeaderAddres = p.getLeaderAddress(); // TODO
+			break;
+		case UPDATED:
+			this.hasClusterUpdatedServer = true; // TODO
+			break;
+		}
+
 	}
 
 	@Override
@@ -94,9 +119,10 @@ public class CardServiceJGroupsImpl extends ReceiverAdapter implements
 		Address syncAddress = getNodeAddress(v);
 		if (syncAddress != null)
 			try {
-				Message cachedData = new Message().setObject(new pushDataMessage(
-						cachedUserData, SyncType.PUSH));
-				channel.send(cachedData);
+				Message syncMessage = new Message()
+						.setObject(new pushDataMessage(cachedUserData,
+								SyncType.PUSH));
+				channel.send(syncMessage);
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -123,10 +149,10 @@ public class CardServiceJGroupsImpl extends ReceiverAdapter implements
 					registered = true;
 					initialUpdate = true;
 				} catch (RemoteException e) {
+					registered = false;
+					initialUpdate = false;
 					e.printStackTrace();
 				}
-				
-				
 			}
 			break;
 		}
@@ -196,10 +222,9 @@ public class CardServiceJGroupsImpl extends ReceiverAdapter implements
 		//
 		UserData uData = cachedUserData.get(id);
 		if (uData != null) {
-			if (uData.getBalance() >= amount)
-				uData.addBalance(-amount);
-			else
-				return CardRegistry.OPERATION_NOT_PERMITTED_BY_BALANCE;
+			return (uData.getBalance() >= amount) ? uData.addBalance(-amount)
+					: CardRegistry.OPERATION_NOT_PERMITTED_BY_BALANCE;
+
 		} else {
 			uData = new UserData(server.getCardBalance(id));
 			CacheRequest c = new CacheRequest(OperationType.TRAVEL, id,
@@ -207,12 +232,12 @@ public class CardServiceJGroupsImpl extends ReceiverAdapter implements
 			try {
 				channel.send(new Message().setObject(c));
 				cachedUserData.put(id, uData);
-				return uData.getBalance();
 			} catch (Exception e) {
+				e.printStackTrace();
 			}
 		}
+		return uData.getBalance();
 
-		return -1; // SHOULD NOT HAPPEN-
 	}
 
 	@SuppressWarnings("static-access")
@@ -224,10 +249,9 @@ public class CardServiceJGroupsImpl extends ReceiverAdapter implements
 		//
 		UserData uData = cachedUserData.get(id);
 		if (uData != null) {
-			if (uData.getBalance() + amount < server.MAX_BALANCE)
-				uData.addBalance(amount);
-			else
-				return CardRegistry.OPERATION_NOT_PERMITTED_BY_BALANCE;
+			return uData.getBalance() + amount < server.MAX_BALANCE ? uData
+					.addBalance(amount)
+					: CardRegistry.OPERATION_NOT_PERMITTED_BY_BALANCE;
 		} else {
 			uData = new UserData(server.getCardBalance(id));
 			CacheRequest c = new CacheRequest(OperationType.RECHARGE, id,
@@ -235,12 +259,34 @@ public class CardServiceJGroupsImpl extends ReceiverAdapter implements
 			try {
 				channel.send(new Message().setObject(c));
 				cachedUserData.put(id, uData);
-				return uData.getBalance();
+
 			} catch (Exception e) {
+				e.printStackTrace();
 			}
 		}
+		return uData.getBalance();
+	}
 
-		return -1; // SHOULD NOT HAPPEN-
+	@Override
+	public void run() {
+		syncronizationWithServer();
+	}
+
+	private void syncronizationWithServer() {
+		while (true) {
+			if (!hasClusterUpdatedServer)
+				if (LocalDateTime.now()
+						.minusSeconds(lastUpdate.getSecondOfMinute())
+						.getSecondOfMinute() > MAX_TIMEOUT_SERVER_MINUTES) {
+					updateServer();
+				}
+
+		}
+	}
+
+	private void updateServer() {
+		lastUpdate = LocalDateTime.now();
+
 	}
 
 }

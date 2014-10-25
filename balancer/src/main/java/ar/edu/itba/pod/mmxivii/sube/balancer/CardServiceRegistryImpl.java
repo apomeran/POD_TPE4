@@ -4,12 +4,14 @@ import ar.edu.itba.pod.mmxivii.sube.common.CardService;
 import ar.edu.itba.pod.mmxivii.sube.common.CardServiceRegistry;
 
 import javax.annotation.Nonnull;
+
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 
 public class CardServiceRegistryImpl extends UnicastRemoteObject implements
 		CardServiceRegistry {
@@ -38,6 +40,7 @@ public class CardServiceRegistryImpl extends UnicastRemoteObject implements
 	}
 
 	CardService getCardService() {
-		return serviceList.get(0);
+		int randomNum = (int)Math.random()*serviceList.size();
+		return serviceList.get(randomNum);
 	}
 }

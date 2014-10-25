@@ -45,12 +45,22 @@ public class MainCache extends BaseMain {
 
 	private void createNode(String nodeName, String clusterName)
 			throws Exception {
-		JChannel node = new JChannel();
-		node.setName(nodeName);
-		CardService cardService = new CardServiceJGroupsImpl(node, server,
-				balancer);
-		node.setReceiver((Receiver) cardService);
-		node.connect(clusterName);
+		// // TODO UNIFY SYNC OPERATIONS IN CHANNEL NODE
+		// // SYNC NODES
+		// JChannel synchronizationNode = new JChannel();
+		// synchronizationNode.setName("sync_" + nodeName);
+		// Synchronizer synchronizer = new Synchronizer(synchronizationNode,
+		// server);
+		// synchronizationNode.setReceiver(synchronizer);
+		// synchronizationNode.connect(clusterName);
+		// CHANNEL NODES
+
+		JChannel channelNode = new JChannel();
+		channelNode.setName(nodeName);
+		CardService cardService = new CardServiceJGroupsImpl(channelNode,
+				server, balancer);
+		channelNode.setReceiver((Receiver) cardService);
+		channelNode.connect(clusterName);
 		// balancer.registerService(myCardService);
 	}
 
