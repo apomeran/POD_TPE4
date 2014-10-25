@@ -10,10 +10,6 @@ import ar.edu.itba.pod.mmxivii.sube.entity.UserData;
 public class SyncRequest implements Serializable {
 	private Map<UID, UserData> cachedUserData = new HashMap<UID, UserData>();
 
-	/**
-	 * 
-	 */
-
 	public SyncRequest(Map<UID, UserData> cachedUserData, SyncType t) {
 		this.cachedUserData = cachedUserData;
 		this.type = t;
@@ -34,8 +30,6 @@ public class SyncRequest implements Serializable {
 		return cachedUserData;
 	}
 
-	public void setCachedUserData(Map<UID, UserData> cachedUserData) {
-		this.cachedUserData = cachedUserData;
-	}
+	
 
 }

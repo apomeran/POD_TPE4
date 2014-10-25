@@ -18,22 +18,22 @@ import ar.edu.itba.pod.mmxivii.sube.common.CardServiceRegistry;
 import ar.edu.itba.pod.mmxivii.sube.common.Utils;
 import ar.edu.itba.pod.mmxivii.sube.entity.OperationType;
 import ar.edu.itba.pod.mmxivii.sube.entity.UserData;
-import ar.edu.itba.pod.mmxivii.sube.service.CardServiceImpl;
 
-public class CardServiceChannelImpl extends ReceiverAdapter implements
+public class CardServiceJGroupsImpl extends ReceiverAdapter implements
 		CardService {
 
 	private final JChannel channel;
-	private CardRegistry cardRegistry;
-	private CardServiceRegistry cardServiceRegistry;
+	private CardRegistry server;
+	private CardServiceRegistry balancer;
 	private Map<UID, UserData> cachedUserData = new HashMap<UID, UserData>();
 	private boolean synchronized_node = false;
+	private boolean registered = false;
 
-	public CardServiceChannelImpl(JChannel channel, CardRegistry cardRegistry,
+	public CardServiceJGroupsImpl(JChannel channel, CardRegistry cardRegistry,
 			CardServiceRegistry cardServiceRegistry) {
 		this.channel = channel;
-		this.cardRegistry = cardRegistry;
-		this.cardServiceRegistry = cardServiceRegistry;
+		this.server = cardRegistry;
+		this.balancer = cardServiceRegistry;
 	}
 
 	public void receive(Message msg) {
@@ -51,32 +51,50 @@ public class CardServiceChannelImpl extends ReceiverAdapter implements
 	}
 
 	@Override
+	public void suspect(Address mbr) {
+		// CHECK IF SOMEONE CRASHES. REMOVE FROM BALANCER
+		// GET WITH ADDRESS AND THEN
+		// balancer.unRegisterService();
+	}
+
+	@Override
 	public void viewAccepted(View v) {
 		if (v.getMembers().size() == 1) {
-			if (synchronized_node == false) {
+			if (registered == false) {
 				try {
-					cardServiceRegistry.registerService(new CardServiceImpl(
-							cardRegistry, this));
-					System.out.println("DADO DE ALTA FRENTE AL BALANCER");
+					balancer.registerService(this);
+					registered = true;
+					System.out.println("Registered First Node");
 				} catch (RemoteException e) {
 				}
-				synchronized_node = true;
+
 			}
 		} else {
-			int i = 0;
-			Address syncAddress = null;
-			while (v.getMembers().get(i) == channel.getAddress()) {
-				i++;
-			}
-			syncAddress = v.getMembers().get(i);
-			if (syncAddress != null)
-				try {
-					channel.send(new Message().setObject(new SyncRequest(
-							cachedUserData, SyncType.REQUEST)));
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
+			sendInformationToNewNode(v);
 		}
+	}
+
+	private void sendInformationToNewNode(View v) {
+		Address syncAddress = getNodeAddress(v);
+		if (syncAddress != null)
+			try {
+				Message cachedData = new Message().setObject(new SyncRequest(
+						cachedUserData, SyncType.REQUEST));
+				channel.send(cachedData);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+	}
+
+	private Address getNodeAddress(View v) {
+		int i = 0;
+		Address syncAddress = null;
+		while (v.getMembers().get(i) != channel.getAddress()
+				&& i < v.getMembers().size()) {
+			i++;
+		}
+		syncAddress = v.getMembers().get(i);
+		return syncAddress;
 	}
 
 	private void applySyncOperation(SyncRequest s, Address address) {
@@ -143,7 +161,7 @@ public class CardServiceChannelImpl extends ReceiverAdapter implements
 		if (uData != null) {
 			return uData.getBalance();
 		}
-		uData = new UserData(cardRegistry.getCardBalance(id));
+		uData = new UserData(server.getCardBalance(id));
 
 		CacheRequest c = new CacheRequest(OperationType.BALANCE, id,
 				uData.getBalance());
@@ -170,7 +188,7 @@ public class CardServiceChannelImpl extends ReceiverAdapter implements
 			else
 				return CardRegistry.OPERATION_NOT_PERMITTED_BY_BALANCE;
 		} else {
-			uData = new UserData(cardRegistry.getCardBalance(id));
+			uData = new UserData(server.getCardBalance(id));
 			CacheRequest c = new CacheRequest(OperationType.TRAVEL, id,
 					uData.getBalance());
 			try {
@@ -193,12 +211,12 @@ public class CardServiceChannelImpl extends ReceiverAdapter implements
 		//
 		UserData uData = cachedUserData.get(id);
 		if (uData != null) {
-			if (uData.getBalance() + amount < cardRegistry.MAX_BALANCE)
+			if (uData.getBalance() + amount < server.MAX_BALANCE)
 				uData.addBalance(amount);
 			else
 				return CardRegistry.OPERATION_NOT_PERMITTED_BY_BALANCE;
 		} else {
-			uData = new UserData(cardRegistry.getCardBalance(id));
+			uData = new UserData(server.getCardBalance(id));
 			CacheRequest c = new CacheRequest(OperationType.RECHARGE, id,
 					uData.getBalance());
 			try {
