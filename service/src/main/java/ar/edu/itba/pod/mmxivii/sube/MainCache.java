@@ -11,7 +11,6 @@ import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
 
 import org.jgroups.JChannel;
-import org.jgroups.Receiver;
 
 import ar.edu.itba.pod.mmxivii.sube.common.BaseMain;
 import ar.edu.itba.pod.mmxivii.sube.common.CardRegistry;
@@ -45,23 +44,13 @@ public class MainCache extends BaseMain {
 
 	private void createNode(String nodeName, String clusterName)
 			throws Exception {
-		// // TODO UNIFY SYNC OPERATIONS IN CHANNEL NODE
-		// // SYNC NODES
-		// JChannel synchronizationNode = new JChannel();
-		// synchronizationNode.setName("sync_" + nodeName);
-		// Synchronizer synchronizer = new Synchronizer(synchronizationNode,
-		// server);
-		// synchronizationNode.setReceiver(synchronizer);
-		// synchronizationNode.connect(clusterName);
-		// CHANNEL NODES
-
-		JChannel channelNode = new JChannel();
-		channelNode.setName(nodeName);
-		CardService cardService = new CardServiceJGroupsImpl(channelNode,
-				server, balancer);
-		channelNode.setReceiver((Receiver) cardService);
-		channelNode.connect(clusterName);
-		// balancer.registerService(myCardService);
+		
+		JChannel channel = new JChannel();
+		CardServiceReceiver receiver = new CardServiceReceiver(channel, server);
+		CardService cardService = new CardServiceImpl(receiver);
+		channel.connect(clusterName);
+		Thread.sleep(3000);
+		balancer.registerService(cardService);
 	}
 
 	public static void main(@Nonnull String[] args) throws Exception {
