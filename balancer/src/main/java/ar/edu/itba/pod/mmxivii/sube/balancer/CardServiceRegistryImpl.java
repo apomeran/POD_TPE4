@@ -1,10 +1,5 @@
 package ar.edu.itba.pod.mmxivii.sube.balancer;
 
-import ar.edu.itba.pod.mmxivii.sube.common.CardService;
-import ar.edu.itba.pod.mmxivii.sube.common.CardServiceRegistry;
-
-import javax.annotation.Nonnull;
-
 import java.rmi.RemoteException;
 import java.rmi.server.UID;
 import java.rmi.server.UnicastRemoteObject;
@@ -12,7 +7,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Random;
+
+import javax.annotation.Nonnull;
+
+import ar.edu.itba.pod.mmxivii.sube.common.CardService;
+import ar.edu.itba.pod.mmxivii.sube.common.CardServiceRegistry;
 
 public class CardServiceRegistryImpl extends UnicastRemoteObject implements
 		CardServiceRegistry {
@@ -25,6 +24,7 @@ public class CardServiceRegistryImpl extends UnicastRemoteObject implements
 	protected CardServiceRegistryImpl() throws RemoteException {
 	}
 
+	@SuppressWarnings("unused")
 	private int randomInt(int min, int max) {
 		return (int) (Math.random() * (max - min) + min);
 	}
@@ -32,6 +32,7 @@ public class CardServiceRegistryImpl extends UnicastRemoteObject implements
 	@Override
 	public void registerService(@Nonnull CardService service)
 			throws RemoteException {
+		if(!serviceList.contains(service))
 		serviceList.add(service);
 	}
 
@@ -52,8 +53,8 @@ public class CardServiceRegistryImpl extends UnicastRemoteObject implements
 			registeredUIDs.add(id);
 		}
 		offset = registeredUIDs.indexOf(id);
-		int selectedNode = offset % serviceList.size();
-		System.out.println("Answering NODE Nº " + selectedNode);
+		System.out.println(serviceList.size());
+		int selectedNode = offset % serviceList.size(); // EQUITY
 		return serviceList.get(0);
 	}
 }

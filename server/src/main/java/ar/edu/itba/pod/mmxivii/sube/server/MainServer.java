@@ -4,6 +4,7 @@ import ar.edu.itba.pod.mmxivii.sube.common.BaseMain;
 import ar.edu.itba.pod.mmxivii.sube.common.Card;
 
 import javax.annotation.Nonnull;
+
 import java.io.*;
 import java.rmi.RemoteException;
 import java.util.Scanner;
@@ -32,6 +33,7 @@ public class MainServer extends BaseMain {
 
 	private void run() {
 		System.out.println("Starting Server!");
+		@SuppressWarnings("resource")
 		final Scanner scan = new Scanner(System.in);
 		String line;
 		do {

@@ -1,5 +1,9 @@
 package ar.edu.itba.pod.mmxivii.sube;
 
+import static ar.edu.itba.pod.mmxivii.sube.common.Utils.CARD_SERVICE_REGISTRY_BIND;
+
+import java.io.Serializable;
+import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.server.UID;
 import java.util.HashMap;
@@ -9,7 +13,9 @@ import org.jgroups.Address;
 import org.jgroups.JChannel;
 import org.jgroups.Message;
 import org.jgroups.ReceiverAdapter;
+import org.jgroups.View;
 
+import ar.edu.itba.pod.mmxivii.sube.pushDataMessage.SyncType;
 import ar.edu.itba.pod.mmxivii.sube.common.CardRegistry;
 import ar.edu.itba.pod.mmxivii.sube.common.CardService;
 import ar.edu.itba.pod.mmxivii.sube.common.CardServiceRegistry;
@@ -17,19 +23,39 @@ import ar.edu.itba.pod.mmxivii.sube.common.Utils;
 import ar.edu.itba.pod.mmxivii.sube.entity.OperationType;
 import ar.edu.itba.pod.mmxivii.sube.entity.UserData;
 
-public class CardServiceReceiver extends ReceiverAdapter implements CardService {
+public class CardServiceReceiver extends ReceiverAdapter implements
+		CardService, Serializable {
 	private Map<UID, UserData> cachedUserData;
 	private CardRegistry server;
 	private CardServiceRegistry balancer;
 	private final JChannel channel;
 	private boolean initialUpdate;
-	private boolean registered;
+	private boolean registered = false;
 	private boolean hasClusterUpdatedServer;
 
-	public CardServiceReceiver(JChannel channel, CardRegistry server) {
+	public CardServiceReceiver(JChannel channel, CardRegistry server,
+			boolean isFirstNode) {
 		this.channel = channel;
 		this.server = server;
+		try {
+			this.balancer = Utils.lookupObject(CARD_SERVICE_REGISTRY_BIND);
+		} catch (NotBoundException e1) {
+			e1.printStackTrace();
+		}
 		this.cachedUserData = new HashMap<UID, UserData>();
+		if (isFirstNode) {
+			if (registered == false) {
+				try {
+					CardServiceImpl cardService = new CardServiceImpl(this);
+					balancer.registerService(cardService);
+					registered = true;
+					initialUpdate = true;
+					System.out.println("Registered First Node");
+				} catch (RemoteException e) {
+				}
+
+			}
+		}
 	}
 
 	public void receive(Message msg) {
@@ -52,6 +78,36 @@ public class CardServiceReceiver extends ReceiverAdapter implements CardService 
 		}
 	}
 
+	@Override
+	public void viewAccepted(View v) {
+		if (v.getMembers().size() > 1)
+			sendInformationToNewNode(v);
+	}
+
+	private void sendInformationToNewNode(View v) {
+		Address syncAddress = getNodeAddress(v);
+		if (syncAddress != null)
+			try {
+				Message syncMessage = new Message()
+						.setObject(new pushDataMessage(cachedUserData,
+								SyncType.PUSH));
+				channel.send(syncMessage);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+	}
+
+	private Address getNodeAddress(View v) {
+		int i = 0;
+		Address syncAddress = null;
+		while (v.getMembers().get(i) != channel.getAddress()
+				&& i < v.getMembers().size()) {
+			i++;
+		}
+		syncAddress = v.getMembers().get(i);
+		return syncAddress;
+	}
+
 	private void applyUpdateServerOperation(pushServerUpdateMessage p,
 			Address src) {
 		switch (p.getOperationType()) {
@@ -71,7 +127,8 @@ public class CardServiceReceiver extends ReceiverAdapter implements CardService 
 			if (!initialUpdate) {
 				cachedUserData.putAll(s.getCachedUserData());
 				try {
-					balancer.registerService(this);
+					CardServiceImpl cardService = new CardServiceImpl(this);
+					balancer.registerService(cardService);
 					registered = true;
 					initialUpdate = true;
 				} catch (RemoteException e) {
@@ -103,6 +160,9 @@ public class CardServiceReceiver extends ReceiverAdapter implements CardService 
 		// NEED TO CHECK IF AMOUNT ACCOMPLISHES $ARS FORMAT
 		Utils.assertAmount(amount);
 		//
+		System.out.println("Propagated Recharge");
+		System.out.println(cachedUserData.size());
+
 		cachedUserData.get(uid).addBalance(amount);
 	}
 
@@ -110,6 +170,9 @@ public class CardServiceReceiver extends ReceiverAdapter implements CardService 
 		// NEED TO CHECK IF AMOUNT ACCOMPLISHES $ARS FORMAT
 		Utils.assertAmount(amount);
 		//
+		System.out.println("Propagated NEW USER DATA");
+		System.out.println(cachedUserData.size());
+
 		cachedUserData.put(uid, new UserData(amount));
 	}
 
@@ -117,15 +180,17 @@ public class CardServiceReceiver extends ReceiverAdapter implements CardService 
 		// NEED TO CHECK IF AMOUNT ACCOMPLISHES $ARS FORMAT
 		Utils.assertAmount(amount);
 		//
+		System.out.println("propagated travel");
 		cachedUserData.get(uid).addBalance(-amount);
+		System.out.println(cachedUserData.size());
 	}
 
 	@Override
 	public double getCardBalance(UID id) throws RemoteException {
 		UserData uData = cachedUserData.get(id);
 		if (uData != null) {
-			System.out.println("Cached Reply CardBalance: "
-					+ uData.getBalance());
+			// System.out.println("Cached Reply CardBalance: "
+			// + uData.getBalance());
 
 			return uData.getBalance();
 		}
@@ -136,8 +201,8 @@ public class CardServiceReceiver extends ReceiverAdapter implements CardService 
 		try {
 			channel.send(new Message().setObject(c));
 			cachedUserData.put(id, uData);
-			System.out.println("Server Reply CardBalance: "
-					+ uData.getBalance());
+			// System.out.println("Server Reply CardBalance: "
+			// + uData.getBalance());
 			return uData.getBalance();
 		} catch (Exception e) {
 		}
@@ -152,7 +217,7 @@ public class CardServiceReceiver extends ReceiverAdapter implements CardService 
 		//
 		UserData uData = cachedUserData.get(id);
 		if (uData != null) {
-			System.out.println("Cached Travel Reply");
+			// System.out.println("Cached Travel Reply");
 
 			return (uData.getBalance() >= amount) ? uData.addBalance(-amount)
 					: CardRegistry.OPERATION_NOT_PERMITTED_BY_BALANCE;
@@ -168,7 +233,7 @@ public class CardServiceReceiver extends ReceiverAdapter implements CardService 
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		System.out.println("Server Travel Reply");
+		// System.out.println("Server Travel Reply");
 		return uData.getBalance();
 	}
 
@@ -197,7 +262,7 @@ public class CardServiceReceiver extends ReceiverAdapter implements CardService 
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		System.out.println("Server Recharge, UserData Nº" + id);
+		// System.out.println("Server Recharge, UserData Nº" + id);
 
 		return uData.getBalance();
 	}

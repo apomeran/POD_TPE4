@@ -15,6 +15,5 @@ public class RmiRunner {
 		while (true) {
 			;
 		}
-
 	}
 }

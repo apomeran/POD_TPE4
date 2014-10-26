@@ -30,43 +30,56 @@ public class MainClient extends BaseMain {
 
 	private void run() throws RemoteException {
 		System.out.println("Main.run");
-		while (true) {
-			queryClient(new Random().nextInt());
-		}
+		new ClientGen().run();
+		new ClientGen().run();
 		// cardClient.newCard()
 	}
 
-	private void queryClient(int i) throws RemoteException {
+	private final class ClientGen implements Runnable {
+
+		@Override
+		public void run() {
+			try {
+				queryClient();
+			} catch (RemoteException e) {
+				System.out.println("ERROR");
+			}
+
+		}
+
+	}
+	private void queryClient() throws RemoteException {
 		final Card card = cardClient.newCard("alumno", "tarjeta");
 		final double primero = cardClient
 				.recharge(card.getId(), "primero", 100);
 		System.out.println("primero = " + primero);
 		double bondi = 0;
-		bondi = cardClient.travel(card.getId(), "bondi", 3);
-		System.out.println("Travel: bondi = " + bondi);
-		bondi = cardClient.travel(card.getId(), "bondi", 3);
-		System.out.println("Travel: bondi = " + bondi);
-		bondi = cardClient.travel(card.getId(), "bondi", 3);
-		System.out.println("Travel: bondi = " + bondi);
-		bondi = cardClient.travel(card.getId(), "bondi", 3);
-		System.out.println("Travel: bondi = " + bondi);
-		bondi = cardClient.travel(card.getId(), "bondi", 3);
-		System.out.println("Travel: bondi = " + bondi);
-		bondi = cardClient.recharge(card.getId(), "bondi", 3);
-		System.out.println("Recharge " + bondi);
-		bondi = cardClient.recharge(card.getId(), "bondi", 3);
-		System.out.println("Recharge " + bondi);
-		bondi = cardClient.recharge(card.getId(), "bondi", 3);
-		System.out.println("Recharge " + bondi);
-		bondi = cardClient.travel(card.getId(), "bondi", 3);
-		System.out.println("Travel: bondi = " + bondi);
-		bondi = cardClient.recharge(card.getId(), "bondi", 3);
-		System.out.println("Recharge " + bondi);
-		bondi = cardClient.recharge(card.getId(), "bondi", 3);
-		System.out.println("Recharge " + bondi);
-
-		bondi = cardClient.travel(card.getId(), "bondi", 3);
-		System.out.println("bondi = " + bondi);
+		while (true) {
+			bondi = cardClient.travel(card.getId(), "bondi", 3);
+			System.out.println("Travel: bondi = " + bondi);
+			bondi = cardClient.travel(card.getId(), "bondi", 3);
+			System.out.println("Travel: bondi = " + bondi);
+			bondi = cardClient.travel(card.getId(), "bondi", 3);
+			System.out.println("Travel: bondi = " + bondi);
+			bondi = cardClient.travel(card.getId(), "bondi", 3);
+			System.out.println("Travel: bondi = " + bondi);
+			bondi = cardClient.travel(card.getId(), "bondi", 3);
+			System.out.println("Travel: bondi = " + bondi);
+			bondi = cardClient.recharge(card.getId(), "bondi", 3);
+			System.out.println("Recharge " + bondi);
+			bondi = cardClient.recharge(card.getId(), "bondi", 3);
+			System.out.println("Recharge " + bondi);
+			bondi = cardClient.recharge(card.getId(), "bondi", 3);
+			System.out.println("Recharge " + bondi);
+			bondi = cardClient.travel(card.getId(), "bondi", 3);
+			System.out.println("Travel: bondi = " + bondi);
+			bondi = cardClient.recharge(card.getId(), "bondi", 3);
+			System.out.println("Recharge " + bondi);
+			bondi = cardClient.recharge(card.getId(), "bondi", 3);
+			System.out.println("Recharge " + bondi);
+			bondi = cardClient.travel(card.getId(), "bondi", 3);
+			System.out.println("bondi = " + bondi);
+		}
 	}
 
 	public Card cardGenerator() {
