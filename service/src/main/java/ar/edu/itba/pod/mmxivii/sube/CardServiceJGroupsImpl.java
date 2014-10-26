@@ -234,14 +234,15 @@ public class CardServiceJGroupsImpl extends ReceiverAdapter implements
 
 		} else {
 			uData = new UserData(server.getCardBalance(id));
-			CacheRequest c = new CacheRequest(OperationType.TRAVEL, id,
-					uData.getBalance());
-			try {
-				channel.send(new Message().setObject(c));
-				cachedUserData.put(id, uData);
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
+
+		}
+		CacheRequest c = new CacheRequest(OperationType.TRAVEL, id,
+				uData.getBalance());
+		try {
+			channel.send(new Message().setObject(c));
+			cachedUserData.put(id, uData);
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
 		System.out
 				.println("Travel ACK via Server, now cached UserData Nº" + id);
@@ -264,15 +265,15 @@ public class CardServiceJGroupsImpl extends ReceiverAdapter implements
 					: CardRegistry.OPERATION_NOT_PERMITTED_BY_BALANCE;
 		} else {
 			uData = new UserData(server.getCardBalance(id));
-			CacheRequest c = new CacheRequest(OperationType.RECHARGE, id,
-					uData.getBalance());
-			try {
-				channel.send(new Message().setObject(c));
-				cachedUserData.put(id, uData);
+		}
+		CacheRequest c = new CacheRequest(OperationType.RECHARGE, id,
+				uData.getBalance());
+		try {
+			channel.send(new Message().setObject(c));
+			cachedUserData.put(id, uData);
 
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
 		System.out.println("Recharged via Server, now cached UserData Nº" + id);
 
