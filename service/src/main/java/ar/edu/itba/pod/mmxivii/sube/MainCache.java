@@ -23,6 +23,7 @@ public class MainCache extends BaseMain {
 	private MainCache(@Nonnull String[] args) throws RemoteException,
 			NotBoundException {
 		super(args, DEFAULT_CLIENT_OPTIONS);
+		System.setProperty("java.net.preferIPv4Stack", "true");
 		getRegistry();
 		server = Utils.lookupObject(CARD_REGISTRY_BIND);
 		String clusterName = "cluster";
