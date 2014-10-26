@@ -193,6 +193,7 @@ public class CardServiceReceiver extends ReceiverAdapter implements CardService{
 		}
 		CacheRequest c = new CacheRequest(OperationType.RECHARGE, id,
 				uData.getBalance());
+		uData.addBalance(amount);
 		try {
 			channel.send(new Message().setObject(c));
 			cachedUserData.put(id, uData);
