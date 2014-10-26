@@ -6,7 +6,6 @@ import static ar.edu.itba.pod.mmxivii.sube.common.Utils.CARD_SERVICE_REGISTRY_BI
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.util.Scanner;
-import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nonnull;
 
@@ -29,11 +28,11 @@ public class MainCache extends BaseMain {
 		server = Utils.lookupObject(CARD_REGISTRY_BIND);
 		balancer = Utils.lookupObject(CARD_SERVICE_REGISTRY_BIND);
 		String clusterName = "JGroupsNodeCluster";
-		int nodesCount = 1;
+		int nodesCount = 10;
 		while (nodesCount > 0) {
 			try {
 				createNode("node_n" + nodesCount, clusterName);
-				Thread.sleep(TimeUnit.SECONDS.toMillis(5));
+				// Thread.sleep(TimeUnit.SECONDS.toMillis(1));
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -44,12 +43,12 @@ public class MainCache extends BaseMain {
 
 	private void createNode(String nodeName, String clusterName)
 			throws Exception {
-		
+
 		JChannel channel = new JChannel();
 		CardServiceReceiver receiver = new CardServiceReceiver(channel, server);
 		CardService cardService = new CardServiceImpl(receiver);
 		channel.connect(clusterName);
-		Thread.sleep(3000);
+		Thread.sleep(1000);
 		balancer.registerService(cardService);
 	}
 

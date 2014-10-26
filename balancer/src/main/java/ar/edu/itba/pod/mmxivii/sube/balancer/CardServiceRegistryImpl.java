@@ -6,6 +6,7 @@ import ar.edu.itba.pod.mmxivii.sube.common.CardServiceRegistry;
 import javax.annotation.Nonnull;
 
 import java.rmi.RemoteException;
+import java.rmi.server.UID;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -18,8 +19,14 @@ public class CardServiceRegistryImpl extends UnicastRemoteObject implements
 	private static final long serialVersionUID = 2473638728674152366L;
 	private final List<CardService> serviceList = Collections
 			.synchronizedList(new ArrayList<CardService>());
+	private final List<UID> registeredUIDs = Collections
+			.synchronizedList(new ArrayList<UID>());
 
 	protected CardServiceRegistryImpl() throws RemoteException {
+	}
+
+	private int randomInt(int min, int max) {
+		return (int) (Math.random() * (max - min) + min);
 	}
 
 	@Override
@@ -39,8 +46,14 @@ public class CardServiceRegistryImpl extends UnicastRemoteObject implements
 		return serviceList;
 	}
 
-	CardService getCardService() {
-		int randomNum = (int)Math.random()*serviceList.size();
-		return serviceList.get(randomNum);
+	CardService getCardService(UID id) {
+		int offset = 0;
+		if (!registeredUIDs.contains(id)) {
+			registeredUIDs.add(id);
+		}
+		offset = registeredUIDs.indexOf(id);
+		int selectedNode = offset % serviceList.size();
+		System.out.println("Answering NODE Nº " + selectedNode);
+		return serviceList.get(0);
 	}
 }

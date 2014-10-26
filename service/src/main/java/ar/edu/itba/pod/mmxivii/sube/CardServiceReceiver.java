@@ -17,7 +17,7 @@ import ar.edu.itba.pod.mmxivii.sube.common.Utils;
 import ar.edu.itba.pod.mmxivii.sube.entity.OperationType;
 import ar.edu.itba.pod.mmxivii.sube.entity.UserData;
 
-public class CardServiceReceiver extends ReceiverAdapter implements CardService{
+public class CardServiceReceiver extends ReceiverAdapter implements CardService {
 	private Map<UID, UserData> cachedUserData;
 	private CardRegistry server;
 	private CardServiceRegistry balancer;
@@ -25,13 +25,13 @@ public class CardServiceReceiver extends ReceiverAdapter implements CardService{
 	private boolean initialUpdate;
 	private boolean registered;
 	private boolean hasClusterUpdatedServer;
-	
+
 	public CardServiceReceiver(JChannel channel, CardRegistry server) {
 		this.channel = channel;
 		this.server = server;
 		this.cachedUserData = new HashMap<UID, UserData>();
 	}
-	
+
 	public void receive(Message msg) {
 		if (!msg.getSrc().equals(channel.getAddress())) {
 			if (msg.getObject() instanceof CacheRequest) {
@@ -56,7 +56,7 @@ public class CardServiceReceiver extends ReceiverAdapter implements CardService{
 			Address src) {
 		switch (p.getOperationType()) {
 		case PICK:
-			//pickedLeaderAddres = p.getLeaderAddress(); // TODO
+			// pickedLeaderAddres = p.getLeaderAddress(); // TODO
 			break;
 		case UPDATED:
 			hasClusterUpdatedServer = true; // TODO
@@ -64,7 +64,7 @@ public class CardServiceReceiver extends ReceiverAdapter implements CardService{
 		}
 
 	}
-	
+
 	private void applySyncOperation(pushDataMessage s, Address address) {
 		switch (s.getOperationType()) {
 		case PUSH:
@@ -98,7 +98,7 @@ public class CardServiceReceiver extends ReceiverAdapter implements CardService{
 		}
 
 	}
-	
+
 	private void applyRecharge(UID uid, double amount) {
 		// NEED TO CHECK IF AMOUNT ACCOMPLISHES $ARS FORMAT
 		Utils.assertAmount(amount);
@@ -120,13 +120,12 @@ public class CardServiceReceiver extends ReceiverAdapter implements CardService{
 		cachedUserData.get(uid).addBalance(-amount);
 	}
 
-	
-
 	@Override
 	public double getCardBalance(UID id) throws RemoteException {
 		UserData uData = cachedUserData.get(id);
 		if (uData != null) {
-			System.out.println("CardBalance ACK UserData Nº" + id);
+			System.out.println("Cached Reply CardBalance: "
+					+ uData.getBalance());
 
 			return uData.getBalance();
 		}
@@ -137,9 +136,8 @@ public class CardServiceReceiver extends ReceiverAdapter implements CardService{
 		try {
 			channel.send(new Message().setObject(c));
 			cachedUserData.put(id, uData);
-			System.out
-					.println("CardBalance ACK via Server, now cached UserData Nº"
-							+ id);
+			System.out.println("Server Reply CardBalance: "
+					+ uData.getBalance());
 			return uData.getBalance();
 		} catch (Exception e) {
 		}
@@ -154,14 +152,13 @@ public class CardServiceReceiver extends ReceiverAdapter implements CardService{
 		//
 		UserData uData = cachedUserData.get(id);
 		if (uData != null) {
-			System.out.println("Travel ACK UserData Nº" + id);
+			System.out.println("Cached Travel Reply");
 
 			return (uData.getBalance() >= amount) ? uData.addBalance(-amount)
 					: CardRegistry.OPERATION_NOT_PERMITTED_BY_BALANCE;
 
 		} else {
 			uData = new UserData(server.getCardBalance(id));
-
 		}
 		CacheRequest c = new CacheRequest(OperationType.TRAVEL, id,
 				uData.getBalance());
@@ -171,8 +168,7 @@ public class CardServiceReceiver extends ReceiverAdapter implements CardService{
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		System.out
-				.println("Travel ACK via Server, now cached UserData Nº" + id);
+		System.out.println("Server Travel Reply");
 		return uData.getBalance();
 	}
 
@@ -184,7 +180,7 @@ public class CardServiceReceiver extends ReceiverAdapter implements CardService{
 		//
 		UserData uData = cachedUserData.get(id);
 		if (uData != null) {
-			System.out.println("Recharged UserData Nº" + id);
+			System.out.println("Cached Recharged Reply Nº" + id);
 			return uData.getBalance() + amount < server.MAX_BALANCE ? uData
 					.addBalance(amount)
 					: CardRegistry.OPERATION_NOT_PERMITTED_BY_BALANCE;
@@ -201,7 +197,7 @@ public class CardServiceReceiver extends ReceiverAdapter implements CardService{
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		System.out.println("Recharged via Server, now cached UserData Nº" + id);
+		System.out.println("Server Recharge, UserData Nº" + id);
 
 		return uData.getBalance();
 	}

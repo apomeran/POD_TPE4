@@ -4,6 +4,7 @@ import static ar.edu.itba.pod.mmxivii.sube.common.Utils.CARD_CLIENT_BIND;
 
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
+import java.util.Random;
 import java.util.UUID;
 
 import javax.annotation.Nonnull;
@@ -29,13 +30,43 @@ public class MainClient extends BaseMain {
 
 	private void run() throws RemoteException {
 		System.out.println("Main.run");
+		while (true) {
+			queryClient(new Random().nextInt());
+		}
+		// cardClient.newCard()
+	}
+
+	private void queryClient(int i) throws RemoteException {
 		final Card card = cardClient.newCard("alumno", "tarjeta");
 		final double primero = cardClient
 				.recharge(card.getId(), "primero", 100);
 		System.out.println("primero = " + primero);
-		final double bondi = cardClient.travel(card.getId(), "bondi", 3);
+		double bondi = 0;
+		bondi = cardClient.travel(card.getId(), "bondi", 3);
+		System.out.println("Travel: bondi = " + bondi);
+		bondi = cardClient.travel(card.getId(), "bondi", 3);
+		System.out.println("Travel: bondi = " + bondi);
+		bondi = cardClient.travel(card.getId(), "bondi", 3);
+		System.out.println("Travel: bondi = " + bondi);
+		bondi = cardClient.travel(card.getId(), "bondi", 3);
+		System.out.println("Travel: bondi = " + bondi);
+		bondi = cardClient.travel(card.getId(), "bondi", 3);
+		System.out.println("Travel: bondi = " + bondi);
+		bondi = cardClient.recharge(card.getId(), "bondi", 3);
+		System.out.println("Recharge " + bondi);
+		bondi = cardClient.recharge(card.getId(), "bondi", 3);
+		System.out.println("Recharge " + bondi);
+		bondi = cardClient.recharge(card.getId(), "bondi", 3);
+		System.out.println("Recharge " + bondi);
+		bondi = cardClient.travel(card.getId(), "bondi", 3);
+		System.out.println("Travel: bondi = " + bondi);
+		bondi = cardClient.recharge(card.getId(), "bondi", 3);
+		System.out.println("Recharge " + bondi);
+		bondi = cardClient.recharge(card.getId(), "bondi", 3);
+		System.out.println("Recharge " + bondi);
+
+		bondi = cardClient.travel(card.getId(), "bondi", 3);
 		System.out.println("bondi = " + bondi);
-		// cardClient.newCard()
 	}
 
 	public Card cardGenerator() {
