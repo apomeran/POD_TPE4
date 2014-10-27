@@ -29,19 +29,15 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 	private CardRegistry server;
 	private CardServiceRegistry balancer;
 	private final JChannel channel;
-	private boolean initialUpdate;
+	private boolean initialUpdate = false;
 	private boolean registered = false;
 	private boolean hasClusterUpdatedServer;
 
 	public CardServiceReceiver(JChannel channel, CardRegistry server,
-			boolean isFirstNode) {
+			CardServiceRegistry balancer, boolean isFirstNode) {
 		this.channel = channel;
 		this.server = server;
-		try {
-			this.balancer = Utils.lookupObject(CARD_SERVICE_REGISTRY_BIND);
-		} catch (NotBoundException e1) {
-			e1.printStackTrace();
-		}
+		this.balancer = balancer;
 		this.cachedUserData = new HashMap<UID, UserData>();
 		if (isFirstNode) {
 			if (registered == false) {
@@ -100,11 +96,11 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 	private Address getNodeAddress(View v) {
 		int i = 0;
 		Address syncAddress = null;
-		while (v.getMembers().get(i) != channel.getAddress()
-				&& i < v.getMembers().size()) {
+		while (i < v.getMembers().size()
+				&& v.getMembers().get(i) != channel.getAddress()) {
 			i++;
 		}
-		syncAddress = v.getMembers().get(i);
+		syncAddress = v.getMembers().get(i - 1);
 		return syncAddress;
 	}
 
@@ -128,10 +124,12 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 				cachedUserData.putAll(s.getCachedUserData());
 				try {
 					CardServiceImpl cardService = new CardServiceImpl(this);
-					balancer.registerService(cardService);
+					if (registered == false)
+						balancer.registerService(cardService);
+
 					registered = true;
 					initialUpdate = true;
-				} catch (RemoteException e) {
+				} catch (Exception e) {
 					registered = false;
 					initialUpdate = false;
 					e.printStackTrace();

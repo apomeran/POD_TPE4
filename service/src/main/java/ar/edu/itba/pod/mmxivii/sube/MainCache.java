@@ -1,6 +1,7 @@
 package ar.edu.itba.pod.mmxivii.sube;
 
 import static ar.edu.itba.pod.mmxivii.sube.common.Utils.CARD_REGISTRY_BIND;
+import static ar.edu.itba.pod.mmxivii.sube.common.Utils.CARD_SERVICE_REGISTRY_BIND;
 
 import java.lang.reflect.InvocationTargetException;
 import java.rmi.NotBoundException;
@@ -15,10 +16,12 @@ import org.jgroups.Receiver;
 
 import ar.edu.itba.pod.mmxivii.sube.common.BaseMain;
 import ar.edu.itba.pod.mmxivii.sube.common.CardRegistry;
+import ar.edu.itba.pod.mmxivii.sube.common.CardServiceRegistry;
 import ar.edu.itba.pod.mmxivii.sube.common.Utils;
 
 public class MainCache extends BaseMain {
 	private CardRegistry server;
+	private CardServiceRegistry balancer;
 
 	private MainCache(@Nonnull String[] args) throws RemoteException,
 			NotBoundException {
@@ -26,6 +29,8 @@ public class MainCache extends BaseMain {
 		System.setProperty("java.net.preferIPv4Stack", "true");
 		getRegistry();
 		server = Utils.lookupObject(CARD_REGISTRY_BIND);
+		balancer = Utils.lookupObject(CARD_SERVICE_REGISTRY_BIND);
+
 		String clusterName = "cluster";
 		int nodesCount = 2;
 		int i = 0;
@@ -51,7 +56,7 @@ public class MainCache extends BaseMain {
 		if (nodeCount == 0)
 			firstNode = true;
 		CardServiceReceiver cardService = new CardServiceReceiver(channel,
-				server, firstNode);
+				server, balancer, firstNode);
 		channel.setReceiver((Receiver) cardService);
 		channel.connect(clusterName);
 		Thread.sleep(3200);
