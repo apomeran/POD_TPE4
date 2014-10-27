@@ -111,33 +111,32 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 
 	@Override
 	public void viewAccepted(View v) {
+
 		if (v.getMembers().size() > 1) {
-			System.out.println("Sent Info to new Node FROM " + nodeName);
 			sendInformationToNewNode(v);
 		}
 	}
 
 	private void sendInformationToNewNode(View v) {
-		Address syncAddress = getNodeAddress(v);
-		if (syncAddress != null)
-			try {
-				Message syncMessage = new Message()
-						.setObject(new pushDataMessage(cachedUserData));
-				channel.send(syncMessage);
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-	}
-
-	private Address getNodeAddress(View v) {
-		int i = 0;
-		Address syncAddress = null;
-		while (i < v.getMembers().size()
-				&& v.getMembers().get(i) != channel.getAddress()) {
-			i++;
+		try {
+			Message syncMessage = new Message().setObject(new pushDataMessage(
+					cachedUserData));
+			System.out.println("Sent Info to all from " + nodeName);
+			Thread.sleep((long) (Math.random() * 300));
+			channel.send(syncMessage);
+			// int i = 0;
+			// while (i < v.getMembers().size()) {
+			// Address nodeAddress = v.getMembers().get(i);
+			// if (nodeAddress != channel.getAddress()) {
+			// channel.send(nodeAddress, syncMessage);
+			// System.out.println("Sent Info to Node " + i + " FROM "
+			// + nodeName);
+			// }
+			// i++;
+			// }
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
-		syncAddress = v.getMembers().get(i - 1);
-		return syncAddress;
 	}
 
 	private void applyUpdateServerOperation(pushServerUpdateMessage p,
@@ -146,26 +145,31 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 	}
 
 	private void applySyncOperation(pushDataMessage s, Address address) {
-		if (!initialUpdate) {
-			cachedUserData.putAll(s.getCachedUserData());
-			try {
-				CardServiceImpl cardService = new CardServiceImpl(this);
-				System.out.println("About to register Node");
+		synchronized (this) {
+			System.out.println("Soy " + nodeName + " y me llego");
+			if (!initialUpdate) {
+				cachedUserData = (s.getCachedUserData());
+				try {
 
-				if (registered == false) {
-					balancer.registerService(cardService);
-					System.out.println("Registered New Node");
-					System.out.println("Size of Nodes "
-							+ balancer.getServices().size());
-					registered = true;
-					initialUpdate = true;
+					if (registered == false) {
+						CardServiceImpl cardService = new CardServiceImpl(this);
+						System.out.println("About to register myself");
+						balancer.registerService(cardService);
+						Thread.sleep(1500);
+						System.out.println("Registered myself");
+						System.out.println("Size of Nodes "
+								+ balancer.getServices().size());
+						registered = true;
+						initialUpdate = true;
+					}
+
+				} catch (Exception e) {
+					registered = false;
+					initialUpdate = false;
+					e.printStackTrace();
 				}
-
-			} catch (Exception e) {
-				registered = false;
-				initialUpdate = false;
-				e.printStackTrace();
 			}
+			System.out.println("Fin del me llego");
 		}
 	}
 
@@ -299,7 +303,6 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 			throws RemoteException {
 		// NEED TO CHECK IF AMOUNT ACCOMPLISHES $ARS FORMAT
 		Utils.assertAmount(amount);
-		//
 		UserData uData = cachedUserData.get(id);
 		if (uData != null) {
 			System.out.println("Cached Recharged Reply Nº" + id);

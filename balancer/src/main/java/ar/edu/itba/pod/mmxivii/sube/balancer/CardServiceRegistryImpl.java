@@ -34,7 +34,6 @@ public class CardServiceRegistryImpl extends UnicastRemoteObject implements
 			throws RemoteException {
 		if (!serviceList.contains(service))
 			serviceList.add(service);
-		System.out.println(serviceList.size());
 	}
 
 	@Override

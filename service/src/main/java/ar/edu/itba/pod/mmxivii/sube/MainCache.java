@@ -9,6 +9,7 @@ import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Random;
 import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
 
@@ -36,20 +37,24 @@ public class MainCache extends BaseMain {
 		getRegistry();
 		server = Utils.lookupObject(CARD_REGISTRY_BIND);
 		balancer = Utils.lookupObject(CARD_SERVICE_REGISTRY_BIND);
-
-		int nodesCount = 2;
-		cacheAmount = 0;
-		while (cacheAmount < nodesCount) {
-			try {
-				createNode("node_n" + cacheAmount, CLUSTER_NAME);
-				Thread.sleep(TimeUnit.SECONDS.toMillis(3));
-			} catch (InvocationTargetException e) {
-
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-			cacheAmount++;
+		try {
+			createNode("node_n" + new Random().nextInt(), CLUSTER_NAME);
+		} catch (Exception e1) {
+			e1.printStackTrace();
 		}
+		// int nodesCount = 1;
+		// cacheAmount = 0;
+		// while (cacheAmount < nodesCount) {
+		// try {
+		// createNode("node_n" + cacheAmount, CLUSTER_NAME);
+		// Thread.sleep(TimeUnit.SECONDS.toMillis(3));
+		// } catch (InvocationTargetException e) {
+		//
+		// } catch (Exception e) {
+		// e.printStackTrace();
+		// }
+		// cacheAmount++;
+		// }
 
 	}
 
@@ -58,7 +63,7 @@ public class MainCache extends BaseMain {
 		JChannel channel = new JChannel();
 		channel.setName(nodeName);
 		boolean firstNode = false;
-		if (cacheAmount == 0)
+		if (balancer.getServices().size() == 0)
 			firstNode = true;
 		CardServiceReceiver cardService = new CardServiceReceiver(channel,
 				server, balancer, firstNode, nodeName);
