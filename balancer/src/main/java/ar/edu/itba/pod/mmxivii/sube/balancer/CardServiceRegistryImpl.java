@@ -32,8 +32,8 @@ public class CardServiceRegistryImpl extends UnicastRemoteObject implements
 	@Override
 	public void registerService(@Nonnull CardService service)
 			throws RemoteException {
-		if(!serviceList.contains(service))
-		serviceList.add(service);
+		if (!serviceList.contains(service))
+			serviceList.add(service);
 	}
 
 	@Override

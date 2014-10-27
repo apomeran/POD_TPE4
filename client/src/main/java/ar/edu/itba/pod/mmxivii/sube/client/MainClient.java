@@ -116,8 +116,8 @@ public class MainClient extends BaseMain {
 				String cardName = randomCardId();
 				Card card = cardClient.newCard(cardName, "");
 				cardIds.add(card.getId());
-				if (i % 20 == 0) {
-					System.out.println(Thread.currentThread().getId() + ": " + i / (float) _usersCount);
+				if (i % 2 == 0) {
+					System.out.println(Thread.currentThread().getId() + ": " + i / (float) _usersCount + "% Completed");
 				}
 			}
 			System.out.println("Registered " + _usersCount + " new users...");

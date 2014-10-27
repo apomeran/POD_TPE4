@@ -175,10 +175,10 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 		//
 		System.out.println("Propagated Recharge");
 		UserData u = cachedUserData.get(uid);
-		if (u != null) {
+		if (u == null) {
 			newUserData(uid, amount);
 		}
-		u.addBalance(amount);
+		cachedUserData.get(uid).addBalance(amount);
 	}
 
 	private void newUserData(UID uid, double amount) {
@@ -196,10 +196,10 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 		//
 		System.out.println("Propagated Travel");
 		UserData u = cachedUserData.get(uid);
-		if (u != null) {
+		if (u == null) {
 			newUserData(uid, amount);
 		}
-		u.addBalance(-amount);
+		cachedUserData.get(uid).addBalance(-amount);
 	}
 
 	@Override
