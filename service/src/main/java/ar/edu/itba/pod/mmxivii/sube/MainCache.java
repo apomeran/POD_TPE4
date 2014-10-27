@@ -32,7 +32,7 @@ public class MainCache extends BaseMain {
 		balancer = Utils.lookupObject(CARD_SERVICE_REGISTRY_BIND);
 
 		String clusterName = "cluster";
-		int nodesCount = 5;
+		int nodesCount = 2;
 		int i = 0;
 		while (i < nodesCount) {
 			try {
