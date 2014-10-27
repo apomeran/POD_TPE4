@@ -146,9 +146,6 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 	}
 
 	private void applySyncOperation(pushDataMessage s, Address address) {
-		System.out.println("SyncOperationReceived. I AM " + nodeName);
-		System.out.println("Inital update es " + initialUpdate);
-		System.out.println("Registered es " + registered);
 		if (!initialUpdate) {
 			cachedUserData.putAll(s.getCachedUserData());
 			try {
@@ -278,15 +275,15 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 		UserData uData = cachedUserData.get(id);
 		if (uData != null) {
 			// System.out.println("Cached Travel Reply");
-
-			return (uData.getBalance() >= amount) ? uData.addBalance(-amount)
-					: CardRegistry.OPERATION_NOT_PERMITTED_BY_BALANCE;
+			if (uData.getBalance() < amount)
+				return CardRegistry.OPERATION_NOT_PERMITTED_BY_BALANCE;
 
 		} else {
 			uData = new UserData(server.getCardBalance(id));
 		}
 		CacheRequest c = new CacheRequest(OperationType.TRAVEL, id,
 				uData.getBalance());
+		uData.addBalance(-amount);
 		try {
 			channel.send(new Message().setObject(c));
 			cachedUserData.put(id, uData);
@@ -306,9 +303,8 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 		UserData uData = cachedUserData.get(id);
 		if (uData != null) {
 			System.out.println("Cached Recharged Reply Nº" + id);
-			return uData.getBalance() + amount <= server.MAX_BALANCE ? uData
-					.addBalance(amount)
-					: CardRegistry.OPERATION_NOT_PERMITTED_BY_BALANCE;
+			if (uData.getBalance() + amount > server.MAX_BALANCE)
+				return CardRegistry.OPERATION_NOT_PERMITTED_BY_BALANCE;
 		} else {
 			uData = new UserData(server.getCardBalance(id));
 		}

@@ -33,7 +33,6 @@ public class MainCache extends BaseMain {
 	private MainCache(@Nonnull String[] args) throws RemoteException,
 			NotBoundException {
 		super(args, DEFAULT_CLIENT_OPTIONS);
-		System.setProperty("java.net.preferIPv4Stack", "true");
 		getRegistry();
 		server = Utils.lookupObject(CARD_REGISTRY_BIND);
 		balancer = Utils.lookupObject(CARD_SERVICE_REGISTRY_BIND);
