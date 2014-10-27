@@ -33,7 +33,7 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 	private boolean initialUpdate = false;
 	private boolean registered = false;
 	private boolean hasClusterUpdatedServer;
-	private ExecutorService executor = Executors.newFixedThreadPool(4);
+	private ExecutorService executor = Executors.newSingleThreadExecutor();
 
 	public CardServiceReceiver(JChannel channel, CardRegistry server,
 			CardServiceRegistry balancer, boolean isFirstNode) {

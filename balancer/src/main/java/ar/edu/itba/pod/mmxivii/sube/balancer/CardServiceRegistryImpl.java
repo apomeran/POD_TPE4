@@ -53,8 +53,8 @@ public class CardServiceRegistryImpl extends UnicastRemoteObject implements
 			registeredUIDs.add(id);
 		}
 		offset = registeredUIDs.indexOf(id);
-		System.out.println(serviceList.size());
+		System.out.println("running services:" + serviceList.size());
 		int selectedNode = offset % serviceList.size(); // EQUITY
-		return serviceList.get(0);
+		return serviceList.get(selectedNode);
 	}
 }
