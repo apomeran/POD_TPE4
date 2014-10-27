@@ -1,9 +1,6 @@
 package ar.edu.itba.pod.mmxivii.sube;
 
-import static ar.edu.itba.pod.mmxivii.sube.common.Utils.CARD_SERVICE_REGISTRY_BIND;
-
 import java.io.Serializable;
-import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.server.UID;
 import java.util.HashMap;
@@ -74,6 +71,25 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 		}
 	}
 
+	public Address getCurrentAddress() {
+		return channel.getAddress();
+	}
+
+	@Override
+	public void suspect(Address mbr) {
+		try {
+			for (CardService serv : balancer.getServices()) {
+				CardServiceReceiver service = (CardServiceReceiver) serv;
+				if (service.getCurrentAddress().equals(mbr)) {
+					balancer.getServices().remove(service);
+					return;
+				}
+			}
+		} catch (RemoteException e) {
+			e.printStackTrace();
+		}
+	}
+
 	@Override
 	public void viewAccepted(View v) {
 		if (v.getMembers().size() > 1)
@@ -126,7 +142,6 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 					CardServiceImpl cardService = new CardServiceImpl(this);
 					if (registered == false)
 						balancer.registerService(cardService);
-
 					registered = true;
 					initialUpdate = true;
 				} catch (Exception e) {

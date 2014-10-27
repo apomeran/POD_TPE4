@@ -48,6 +48,7 @@ public class MainClient extends BaseMain {
 		}
 
 	}
+
 	private void queryClient() throws RemoteException {
 		final Card card = cardClient.newCard("alumno", "tarjeta");
 		final double primero = cardClient
@@ -55,30 +56,12 @@ public class MainClient extends BaseMain {
 		System.out.println("primero = " + primero);
 		double bondi = 0;
 		while (true) {
-			bondi = cardClient.travel(card.getId(), "bondi", 3);
+			bondi = cardClient.travel(card.getId(), "bondi", 20);
 			System.out.println("Travel: bondi = " + bondi);
-			bondi = cardClient.travel(card.getId(), "bondi", 3);
+			bondi = cardClient.travel(card.getId(), "bondi", 20);
 			System.out.println("Travel: bondi = " + bondi);
-			bondi = cardClient.travel(card.getId(), "bondi", 3);
-			System.out.println("Travel: bondi = " + bondi);
-			bondi = cardClient.travel(card.getId(), "bondi", 3);
-			System.out.println("Travel: bondi = " + bondi);
-			bondi = cardClient.travel(card.getId(), "bondi", 3);
-			System.out.println("Travel: bondi = " + bondi);
-			bondi = cardClient.recharge(card.getId(), "bondi", 3);
+			bondi = cardClient.recharge(card.getId(), "bondi", 40);
 			System.out.println("Recharge " + bondi);
-			bondi = cardClient.recharge(card.getId(), "bondi", 3);
-			System.out.println("Recharge " + bondi);
-			bondi = cardClient.recharge(card.getId(), "bondi", 3);
-			System.out.println("Recharge " + bondi);
-			bondi = cardClient.travel(card.getId(), "bondi", 3);
-			System.out.println("Travel: bondi = " + bondi);
-			bondi = cardClient.recharge(card.getId(), "bondi", 3);
-			System.out.println("Recharge " + bondi);
-			bondi = cardClient.recharge(card.getId(), "bondi", 3);
-			System.out.println("Recharge " + bondi);
-			bondi = cardClient.travel(card.getId(), "bondi", 3);
-			System.out.println("bondi = " + bondi);
 		}
 	}
 
