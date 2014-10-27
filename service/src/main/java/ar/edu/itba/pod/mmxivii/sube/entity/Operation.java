@@ -6,12 +6,14 @@ public class Operation implements Comparable<Operation> {
 
 	private OperationType type;
 	private double amount;
+	private boolean updatedToServer = false;
 	private Date timestamp;
 
 	public Operation(OperationType opType, double amount) {
 		this.type = opType;
 		this.amount = amount;
 		this.timestamp = new Date();
+
 	}
 
 	@Override
@@ -41,6 +43,14 @@ public class Operation implements Comparable<Operation> {
 
 	public void setTimestamp(Date timestamp) {
 		this.timestamp = timestamp;
+	}
+
+	public void setUpdated() {
+		this.updatedToServer = true;
+	}
+
+	public boolean isAlreadyUpdatedInServer() {
+		return this.updatedToServer;
 	}
 
 }

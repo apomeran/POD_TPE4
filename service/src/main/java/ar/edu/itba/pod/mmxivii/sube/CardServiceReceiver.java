@@ -17,12 +17,14 @@ import ar.edu.itba.pod.mmxivii.sube.common.CardRegistry;
 import ar.edu.itba.pod.mmxivii.sube.common.CardService;
 import ar.edu.itba.pod.mmxivii.sube.common.CardServiceRegistry;
 import ar.edu.itba.pod.mmxivii.sube.common.Utils;
+import ar.edu.itba.pod.mmxivii.sube.entity.Operation;
 import ar.edu.itba.pod.mmxivii.sube.entity.OperationType;
 import ar.edu.itba.pod.mmxivii.sube.entity.UserData;
 
 public class CardServiceReceiver extends ReceiverAdapter implements
 		CardService, Serializable {
 	private Map<UID, UserData> cachedUserData;
+	private Map<UID, UserData> myCachedUserData;
 	private CardRegistry server;
 	private CardServiceRegistry balancer;
 	private final JChannel channel;
@@ -36,6 +38,7 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 		this.server = server;
 		this.balancer = balancer;
 		this.cachedUserData = new HashMap<UID, UserData>();
+		this.myCachedUserData = new HashMap<UID, UserData>();
 		if (isFirstNode) {
 			if (registered == false) {
 				try {
@@ -189,6 +192,25 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 				+ " users in each Node");
 
 		cachedUserData.put(uid, new UserData(amount));
+		myCachedUserData.put(uid, new UserData(amount));
+	}
+
+	private void updateServer() {
+		System.out.println("Updating Server");
+		for (UID uid : myCachedUserData.keySet()) {
+			for (Operation operation : myCachedUserData.get(uid)
+					.getOperations()) {
+				try {
+					if (!operation.isAlreadyUpdatedInServer()) {
+						server.addCardOperation(uid, operation.getType()
+								.toString(), operation.getAmount());
+						operation.setUpdated();
+					}
+				} catch (RemoteException e) {
+					e.printStackTrace();
+				}
+			}
+		}
 	}
 
 	private void applyTravel(UID uid, double amount) {
