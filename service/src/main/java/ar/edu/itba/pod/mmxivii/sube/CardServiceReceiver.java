@@ -195,7 +195,7 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 		myCachedUserData.put(uid, new UserData(amount));
 	}
 
-	private void updateServer() {
+	private void downloadDataToServer() {
 		System.out.println("Updating Server");
 		for (UID uid : myCachedUserData.keySet()) {
 			for (Operation operation : myCachedUserData.get(uid)
