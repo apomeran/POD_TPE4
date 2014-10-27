@@ -7,14 +7,13 @@ import java.rmi.server.UnicastRemoteObject;
 import ar.edu.itba.pod.mmxivii.sube.common.CardService;
 
 @SuppressWarnings("serial")
-public class CardServiceImpl extends UnicastRemoteObject implements
-		CardService {
+public class CardServiceImpl extends UnicastRemoteObject implements CardService {
 
 	private CardService slave;
 
-	public CardServiceImpl(CardService slave) throws RemoteException{
-			super();
-			this.slave = slave;			
+	public CardServiceImpl(CardService slave) throws RemoteException {
+		super();
+		this.slave = slave;
 	}
 
 	@Override
@@ -32,6 +31,10 @@ public class CardServiceImpl extends UnicastRemoteObject implements
 	public double recharge(UID id, String description, double amount)
 			throws RemoteException {
 		return slave.recharge(id, description, amount);
+	}
+
+	public CardServiceImpl getService() {
+		return (CardServiceImpl) slave;
 	}
 
 }

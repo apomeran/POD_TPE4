@@ -62,7 +62,7 @@ public class MainCache extends BaseMain {
 		if (cacheAmount == 0)
 			firstNode = true;
 		CardServiceReceiver cardService = new CardServiceReceiver(channel,
-				server, balancer, firstNode);
+				server, balancer, firstNode, nodeName);
 		channel.setReceiver((Receiver) cardService);
 		channel.connect(clusterName);
 		Thread.sleep(1200);
@@ -81,7 +81,7 @@ public class MainCache extends BaseMain {
 		do {
 			line = scan.next();
 			System.out.println("Service running");
-			if(line.equals("add")) {
+			if (line.equals("add")) {
 				try {
 					createNode("node_n" + cacheAmount, CLUSTER_NAME);
 					Thread.sleep(TimeUnit.SECONDS.toMillis(3));
@@ -91,12 +91,13 @@ public class MainCache extends BaseMain {
 					e.printStackTrace();
 				}
 				cacheAmount++;
-			} else if(line.equals("remove")) {
-				int randomChannel = (int)Math.random() * channels.size();
+			} else if (line.equals("remove")) {
+				int randomChannel = (int) Math.random() * channels.size();
 				JChannel c = channels.get(randomChannel);
 				c.close();
 				System.out.println("Closed channel number " + randomChannel);
-				balancer.unRegisterService((CardService)balancer.getServices().toArray()[randomChannel]);
+				balancer.unRegisterService((CardService) balancer.getServices()
+						.toArray()[randomChannel]);
 				channels.remove(randomChannel);
 			}
 		} while (!"x".equals(line));

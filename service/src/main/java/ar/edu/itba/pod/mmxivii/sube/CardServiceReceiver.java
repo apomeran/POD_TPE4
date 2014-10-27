@@ -14,7 +14,6 @@ import org.jgroups.Message;
 import org.jgroups.ReceiverAdapter;
 import org.jgroups.View;
 
-import ar.edu.itba.pod.mmxivii.sube.pushDataMessage.SyncType;
 import ar.edu.itba.pod.mmxivii.sube.common.CardRegistry;
 import ar.edu.itba.pod.mmxivii.sube.common.CardService;
 import ar.edu.itba.pod.mmxivii.sube.common.CardServiceRegistry;
@@ -25,21 +24,26 @@ import ar.edu.itba.pod.mmxivii.sube.entity.UserData;
 
 public class CardServiceReceiver extends ReceiverAdapter implements
 		CardService, Serializable {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 	private Map<UID, UserData> cachedUserData;
 	private Map<UID, UserData> myCachedUserData;
 	private CardRegistry server;
 	private CardServiceRegistry balancer;
 	private final JChannel channel;
-	private boolean initialUpdate = false;
-	private boolean registered = false;
-	private boolean hasClusterUpdatedServer;
+	private boolean initialUpdate;
+	private boolean registered;
 	private ExecutorService executor = Executors.newSingleThreadExecutor();
+	private String nodeName;
 
 	public CardServiceReceiver(JChannel channel, CardRegistry server,
-			CardServiceRegistry balancer, boolean isFirstNode) {
+			CardServiceRegistry balancer, boolean isFirstNode, String name) {
 		this.channel = channel;
 		this.server = server;
 		this.balancer = balancer;
+		this.nodeName = name;
 		this.cachedUserData = new HashMap<UID, UserData>();
 		this.myCachedUserData = new HashMap<UID, UserData>();
 		if (isFirstNode) {
@@ -49,11 +53,16 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 					balancer.registerService(cardService);
 					registered = true;
 					initialUpdate = true;
-					System.out.println("Registered First Node");
+					System.out.println("Registered First Node." + nodeName);
+					System.out.println("Size of Nodes "
+							+ balancer.getServices().size());
 				} catch (RemoteException e) {
 				}
 
 			}
+		} else {
+			registered = false;
+			initialUpdate = false;
 		}
 	}
 
@@ -87,8 +96,12 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 			for (CardService serv : balancer.getServices()) {
 				CardServiceReceiver service = (CardServiceReceiver) serv;
 				if (service.getCurrentAddress().equals(mbr)) {
-					balancer.getServices().remove(service);
-					return;
+					for (CardService c : balancer.getServices()) {
+						if (((CardServiceImpl) c).getService().equals(service)) {
+							balancer.getServices().remove(c);
+							return;
+						}
+					}
 				}
 			}
 		} catch (RemoteException e) {
@@ -98,8 +111,10 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 
 	@Override
 	public void viewAccepted(View v) {
-		if (v.getMembers().size() > 1)
+		if (v.getMembers().size() > 1) {
+			System.out.println("Sent Info to new Node FROM " + nodeName);
 			sendInformationToNewNode(v);
+		}
 	}
 
 	private void sendInformationToNewNode(View v) {
@@ -107,8 +122,7 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 		if (syncAddress != null)
 			try {
 				Message syncMessage = new Message()
-						.setObject(new pushDataMessage(cachedUserData,
-								SyncType.PUSH));
+						.setObject(new pushDataMessage(cachedUserData));
 				channel.send(syncMessage);
 			} catch (Exception e) {
 				e.printStackTrace();
@@ -128,35 +142,33 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 
 	private void applyUpdateServerOperation(pushServerUpdateMessage p,
 			Address src) {
-		switch (p.getOperationType()) {
-		case PICK:
-			// pickedLeaderAddres = p.getLeaderAddress(); // TODO
-			break;
-		case UPDATED:
-			hasClusterUpdatedServer = true; // TODO
-			break;
-		}
 
 	}
 
 	private void applySyncOperation(pushDataMessage s, Address address) {
-		switch (s.getOperationType()) {
-		case PUSH:
-			if (!initialUpdate) {
-				cachedUserData.putAll(s.getCachedUserData());
-				try {
-					CardServiceImpl cardService = new CardServiceImpl(this);
-					if (registered == false)
-						balancer.registerService(cardService);
+		System.out.println("SyncOperationReceived. I AM " + nodeName);
+		System.out.println("Inital update es " + initialUpdate);
+		System.out.println("Registered es " + registered);
+		if (!initialUpdate) {
+			cachedUserData.putAll(s.getCachedUserData());
+			try {
+				CardServiceImpl cardService = new CardServiceImpl(this);
+				System.out.println("About to register Node");
+
+				if (registered == false) {
+					balancer.registerService(cardService);
+					System.out.println("Registered New Node");
+					System.out.println("Size of Nodes "
+							+ balancer.getServices().size());
 					registered = true;
 					initialUpdate = true;
-				} catch (Exception e) {
-					registered = false;
-					initialUpdate = false;
-					e.printStackTrace();
 				}
+
+			} catch (Exception e) {
+				registered = false;
+				initialUpdate = false;
+				e.printStackTrace();
 			}
-			break;
 		}
 	}
 
@@ -172,7 +184,7 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 			applyRecharge(r.getUid(), r.getBalance());
 			break;
 		}
-		executor.execute( new Runnable() {			
+		executor.execute(new Runnable() {
 			public void run() {
 				downloadDataToServer();
 			};
