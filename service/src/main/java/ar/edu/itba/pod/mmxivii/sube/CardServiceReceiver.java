@@ -5,6 +5,8 @@ import java.rmi.RemoteException;
 import java.rmi.server.UID;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.jgroups.Address;
 import org.jgroups.JChannel;
@@ -31,6 +33,7 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 	private boolean initialUpdate = false;
 	private boolean registered = false;
 	private boolean hasClusterUpdatedServer;
+	private ExecutorService executor = Executors.newFixedThreadPool(4);
 
 	public CardServiceReceiver(JChannel channel, CardRegistry server,
 			CardServiceRegistry balancer, boolean isFirstNode) {
@@ -169,6 +172,11 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 			applyRecharge(r.getUid(), r.getBalance());
 			break;
 		}
+		executor.execute( new Runnable() {			
+			public void run() {
+				downloadDataToServer();
+			};
+		});
 
 	}
 
