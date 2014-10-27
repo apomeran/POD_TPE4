@@ -59,7 +59,7 @@ public class MainCache extends BaseMain {
 				server, balancer, firstNode);
 		channel.setReceiver((Receiver) cardService);
 		channel.connect(clusterName);
-		Thread.sleep(3200);
+		Thread.sleep(1200);
 	}
 
 	public static void main(@Nonnull String[] args) throws Exception {

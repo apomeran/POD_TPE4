@@ -185,7 +185,8 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 		// NEED TO CHECK IF AMOUNT ACCOMPLISHES $ARS FORMAT
 		Utils.assertAmount(amount);
 		//
-		System.out.println(cachedUserData.size());
+		System.out.println("Holding information for " + cachedUserData.size()
+				+ " users in each Node");
 
 		cachedUserData.put(uid, new UserData(amount));
 	}
@@ -263,7 +264,7 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 		UserData uData = cachedUserData.get(id);
 		if (uData != null) {
 			System.out.println("Cached Recharged Reply Nº" + id);
-			return uData.getBalance() + amount < server.MAX_BALANCE ? uData
+			return uData.getBalance() + amount <= server.MAX_BALANCE ? uData
 					.addBalance(amount)
 					: CardRegistry.OPERATION_NOT_PERMITTED_BY_BALANCE;
 		} else {
