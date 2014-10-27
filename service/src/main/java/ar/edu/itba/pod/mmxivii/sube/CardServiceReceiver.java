@@ -174,16 +174,17 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 		Utils.assertAmount(amount);
 		//
 		System.out.println("Propagated Recharge");
-		System.out.println(cachedUserData.size());
-
-		cachedUserData.get(uid).addBalance(amount);
+		UserData u = cachedUserData.get(uid);
+		if (u != null) {
+			newUserData(uid, amount);
+		}
+		u.addBalance(amount);
 	}
 
 	private void newUserData(UID uid, double amount) {
 		// NEED TO CHECK IF AMOUNT ACCOMPLISHES $ARS FORMAT
 		Utils.assertAmount(amount);
 		//
-		System.out.println("Propagated NEW USER DATA");
 		System.out.println(cachedUserData.size());
 
 		cachedUserData.put(uid, new UserData(amount));
@@ -193,9 +194,12 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 		// NEED TO CHECK IF AMOUNT ACCOMPLISHES $ARS FORMAT
 		Utils.assertAmount(amount);
 		//
-		System.out.println("propagated travel");
-		cachedUserData.get(uid).addBalance(-amount);
-		System.out.println(cachedUserData.size());
+		System.out.println("Propagated Travel");
+		UserData u = cachedUserData.get(uid);
+		if (u != null) {
+			newUserData(uid, amount);
+		}
+		u.addBalance(-amount);
 	}
 
 	@Override
