@@ -49,7 +49,8 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 		if (isFirstNode) {
 			if (registered == false) {
 				try {
-					CardServiceImpl cardService = new CardServiceImpl(this);
+					CardServiceImpl cardService = new CardServiceImpl(
+							channel.getAddress(), this);
 					balancer.registerService(cardService);
 					registered = true;
 					initialUpdate = true;
@@ -91,27 +92,7 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 	}
 
 	@Override
-	public void suspect(Address mbr) {
-		try {
-			for (CardService serv : balancer.getServices()) {
-				CardServiceReceiver service = (CardServiceReceiver) serv;
-				if (service.getCurrentAddress().equals(mbr)) {
-					for (CardService c : balancer.getServices()) {
-						if (((CardServiceImpl) c).getService().equals(service)) {
-							balancer.getServices().remove(c);
-							return;
-						}
-					}
-				}
-			}
-		} catch (RemoteException e) {
-			e.printStackTrace();
-		}
-	}
-
-	@Override
 	public void viewAccepted(View v) {
-
 		if (v.getMembers().size() > 1) {
 			sendInformationToNewNode(v);
 		}
@@ -152,7 +133,8 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 				try {
 
 					if (registered == false) {
-						CardServiceImpl cardService = new CardServiceImpl(this);
+						CardServiceImpl cardService = new CardServiceImpl(
+								channel.getAddress(), this);
 						System.out.println("About to register myself");
 						balancer.registerService(cardService);
 						Thread.sleep(1500);

@@ -39,7 +39,9 @@ public class CardServiceRegistryImpl extends UnicastRemoteObject implements
 	@Override
 	public void unRegisterService(@Nonnull CardService service)
 			throws RemoteException {
-		serviceList.remove(service);
+		synchronized (this) {
+			serviceList.remove(service);
+		}
 	}
 
 	@Override
@@ -55,6 +57,21 @@ public class CardServiceRegistryImpl extends UnicastRemoteObject implements
 		offset = registeredUIDs.indexOf(id);
 		System.out.println("running services:" + serviceList.size());
 		int selectedNode = offset % serviceList.size(); // EQUITY
-		return serviceList.get(selectedNode);
+		CardService service = serviceList.get(selectedNode);
+		return tryIfItsAlive(service, id);
+	}
+
+	private CardService tryIfItsAlive(CardService service, UID id) {
+		try {
+			service.getCardBalance(id);
+		} catch (RemoteException e) {
+			try {
+				unRegisterService(service);
+				return getCardService(id);
+			} catch (RemoteException e1) {
+				e1.printStackTrace();
+			}
+		}
+		return service;
 	}
 }
