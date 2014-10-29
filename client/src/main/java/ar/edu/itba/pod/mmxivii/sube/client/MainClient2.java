@@ -35,9 +35,27 @@ public class MainClient2 extends BaseMain {
 
 	private void run() throws RemoteException {
 		System.out.println("Main.run");
-		rechargeTravelAndRechargeAgainTest();
-		insuficcientCreditTravel();
-		heavyLoadtest();
+		Card card = cardClient.newCard("test", "");
+		UID cardId = card.getId();
+		System.out.println("Recarga " + cardClient.recharge(cardId, "recarga", 10));
+		System.out.println("Recarga " + cardClient.recharge(cardId, "recarga", 10));
+		System.out.println("Recarga " + cardClient.recharge(cardId, "recarga", 10));
+		System.out.println("Recarga " + cardClient.recharge(cardId, "recarga", 10));
+		System.out.println("Recarga " + cardClient.recharge(cardId, "recarga", 10));
+		System.out.println("Viaje " + cardClient.travel(cardId, "viajo", 3));
+		System.out.println("Recarga " + cardClient.recharge(cardId, "recarga", 10));
+		System.out.println("Recarga " + cardClient.recharge(cardId, "recarga", 10));
+		System.out.println("Viaje " + cardClient.travel(cardId, "viajo", 3));
+		System.out.println("Viaje " + cardClient.travel(cardId, "viajo", 3));
+		System.out.println("Viaje " + cardClient.travel(cardId, "viajo", 3));
+		System.out.println("Viaje " + cardClient.travel(cardId, "viajo", 3));
+		System.out.println("Viaje " + cardClient.travel(cardId, "viajo", 3));
+		System.out.println("Viaje " + cardClient.travel(cardId, "viajo", 3));
+		System.out.println("Viaje " + cardClient.travel(cardId, "viajo", 3));
+		System.out.println("Viaje " + cardClient.travel(cardId, "viajo", 3));
+
+		System.out.println("El saldo final en server deberia ser "
+				+ cardClient.getCardBalance(cardId));
 	}
 
 	private void rechargeTravelAndRechargeAgainTest() throws RemoteException {

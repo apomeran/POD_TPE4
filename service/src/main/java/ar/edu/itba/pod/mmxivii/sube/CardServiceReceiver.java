@@ -29,7 +29,7 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 	 */
 	private static final long serialVersionUID = 1L;
 	private Map<UID, UserData> cachedUserData;
-	private Map<UID, UserData> myCachedUserData;
+	private Map<UID, UserData> myUsersCachedUserData;
 	private CardRegistry server;
 	private CardServiceRegistry balancer;
 	private final JChannel channel;
@@ -45,7 +45,7 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 		this.balancer = balancer;
 		this.nodeName = name;
 		this.cachedUserData = new HashMap<UID, UserData>();
-		this.myCachedUserData = new HashMap<UID, UserData>();
+		this.myUsersCachedUserData = new HashMap<UID, UserData>();
 		if (isFirstNode) {
 			if (registered == false) {
 				try {
@@ -65,6 +65,7 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 			registered = false;
 			initialUpdate = false;
 		}
+
 	}
 
 	public void receive(Message msg) {
@@ -167,11 +168,6 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 			applyRecharge(r.getUid(), r.getBalance());
 			break;
 		}
-		executor.execute(new Runnable() {
-			public void run() {
-				downloadDataToServer();
-			};
-		});
 
 	}
 
@@ -195,16 +191,19 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 				+ " users in each Node");
 
 		cachedUserData.put(uid, new UserData(amount));
-		myCachedUserData.put(uid, new UserData(amount));
+		myUsersCachedUserData.put(uid, new UserData(amount));
 	}
 
 	private void downloadDataToServer() {
 		System.out.println("Updating Server");
-		for (UID uid : myCachedUserData.keySet()) {
-			for (Operation operation : myCachedUserData.get(uid)
+		for (UID uid : myUsersCachedUserData.keySet()) {
+			for (Operation operation : myUsersCachedUserData.get(uid)
 					.getOperations()) {
 				try {
 					if (!operation.isAlreadyUpdatedInServer()) {
+						System.out.println("Operation " + uid + " Type:"
+								+ operation.getType().toString() + " Amount: $"
+								+ operation.getAmount());
 						server.addCardOperation(uid, operation.getType()
 								.toString(), operation.getAmount());
 						operation.setUpdated();
@@ -214,6 +213,7 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 				}
 			}
 		}
+		System.out.println("********* END UPDATE SERVER ***********");
 	}
 
 	private void applyTravel(UID uid, double amount) {
@@ -244,11 +244,20 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 		try {
 			channel.send(new Message().setObject(c));
 			cachedUserData.put(id, uData);
+			myUsersCachedUserData.put(id, uData);
+
 			// System.out.println("Server Reply CardBalance: "
 			// + uData.getBalance());
 			return uData.getBalance();
 		} catch (Exception e) {
 		}
+		executor.execute(new Runnable() {
+			@Override
+			public void run() {
+				downloadDataToServer();
+
+			}
+		});
 		return -1; // SHOULD NOT HAPPEN-
 	}
 
@@ -260,23 +269,34 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 		//
 		UserData uData = cachedUserData.get(id);
 		if (uData != null) {
-			// System.out.println("Cached Travel Reply");
+			System.out.println("Cached Travel");
 			if (uData.getBalance() < amount)
 				return CardRegistry.OPERATION_NOT_PERMITTED_BY_BALANCE;
 
 		} else {
+			System.out.println("Asking Server Travel");
 			uData = new UserData(server.getCardBalance(id));
 		}
 		CacheRequest c = new CacheRequest(OperationType.TRAVEL, id,
 				uData.getBalance());
-		uData.addBalance(-amount);
+		uData.travel(amount);
 		try {
 			channel.send(new Message().setObject(c));
 			cachedUserData.put(id, uData);
+			myUsersCachedUserData.put(id, uData);
+
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		// System.out.println("Server Travel Reply");
+		System.out.println("Travel, UserData Nº" + id);
+		System.out.println("**********************");
+		executor.execute(new Runnable() {
+			@Override
+			public void run() {
+				downloadDataToServer();
+
+			}
+		});
 		return uData.getBalance();
 	}
 
@@ -287,24 +307,33 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 		Utils.assertAmount(amount);
 		UserData uData = cachedUserData.get(id);
 		if (uData != null) {
-			System.out.println("Cached Recharged Reply Nº" + id);
+			System.out.println("Cached Recharge");
 			if (uData.getBalance() + amount > server.MAX_BALANCE)
 				return CardRegistry.OPERATION_NOT_PERMITTED_BY_BALANCE;
 		} else {
+			System.out.println("Asking Server Recharge");
 			uData = new UserData(server.getCardBalance(id));
 		}
 		CacheRequest c = new CacheRequest(OperationType.RECHARGE, id,
 				uData.getBalance());
-		uData.addBalance(amount);
+		uData.charge(amount);
 		try {
 			channel.send(new Message().setObject(c));
 			cachedUserData.put(id, uData);
+			myUsersCachedUserData.put(id, uData);
 
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		// System.out.println("Server Recharge, UserData Nº" + id);
+		executor.execute(new Runnable() {
+			@Override
+			public void run() {
+				downloadDataToServer();
 
+			}
+		});
+		System.out.println("Recharge, UserData Nº" + id);
+		System.out.println("**********************");
 		return uData.getBalance();
 	}
 
