@@ -101,8 +101,18 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 
 	private void sendInformationToNewNode(View v) {
 		try {
+
+			// I DO THIS NEW MAP UID-USERDATA BECAUSE OPERATION IS NOT
+			// SERIALIZABLE AND THROWS
+			// EXCEPTION WHEN SENDING TO OTHER NODES
+			// IM JUST CLEARING OPERATIONS
+			Map<UID, UserData> newInfoToNewNode = new HashMap<UID, UserData>();
+			for (UID uid : newInfoToNewNode.keySet()) {
+				newInfoToNewNode.put(uid, new UserData(newInfoToNewNode
+						.get(uid).getBalance()));
+			}
 			Message syncMessage = new Message().setObject(new pushDataMessage(
-					cachedUserData));
+					newInfoToNewNode));
 			System.out.println("Sent Info to all from " + nodeName);
 			Thread.sleep((long) (Math.random() * 300));
 			channel.send(syncMessage);
@@ -251,13 +261,7 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 			return uData.getBalance();
 		} catch (Exception e) {
 		}
-		executor.execute(new Runnable() {
-			@Override
-			public void run() {
-				downloadDataToServer();
-
-			}
-		});
+		downloadDataToServer();
 		return -1; // SHOULD NOT HAPPEN-
 	}
 
@@ -290,13 +294,7 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 		}
 		System.out.println("Travel, UserData Nº" + id);
 		System.out.println("**********************");
-		executor.execute(new Runnable() {
-			@Override
-			public void run() {
-				downloadDataToServer();
-
-			}
-		});
+		downloadDataToServer();
 		return uData.getBalance();
 	}
 
@@ -325,13 +323,7 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		executor.execute(new Runnable() {
-			@Override
-			public void run() {
-				downloadDataToServer();
-
-			}
-		});
+		downloadDataToServer();
 		System.out.println("Recharge, UserData Nº" + id);
 		System.out.println("**********************");
 		return uData.getBalance();

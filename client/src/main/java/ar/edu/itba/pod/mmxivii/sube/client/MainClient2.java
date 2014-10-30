@@ -35,7 +35,7 @@ public class MainClient2 extends BaseMain {
 
 	private void run() throws RemoteException {
 		System.out.println("Main.run");
-		Card card = cardClient.newCard("test", "");
+		Card card = cardClient.newCard("careta4", "");
 		UID cardId = card.getId();
 		System.out.println("Recarga " + cardClient.recharge(cardId, "recarga", 10));
 		System.out.println("Recarga " + cardClient.recharge(cardId, "recarga", 10));
