@@ -4,16 +4,21 @@ import java.rmi.RemoteException;
 import java.rmi.server.UID;
 import java.rmi.server.UnicastRemoteObject;
 
+import org.jgroups.Address;
+
 import ar.edu.itba.pod.mmxivii.sube.common.CardService;
 
 @SuppressWarnings("serial")
 public class CardServiceImpl extends UnicastRemoteObject implements CardService {
 
 	private CardService slave;
+	private Address address;
 
-	public CardServiceImpl(CardService slave) throws RemoteException {
+	public CardServiceImpl(Address address, CardService slave)
+			throws RemoteException {
 		super();
 		this.slave = slave;
+		this.address = address;
 	}
 
 	@Override
@@ -35,6 +40,10 @@ public class CardServiceImpl extends UnicastRemoteObject implements CardService 
 
 	public CardServiceImpl getService() {
 		return (CardServiceImpl) slave;
+	}
+
+	public Address getCurrentAddress() {
+		return address;
 	}
 
 }

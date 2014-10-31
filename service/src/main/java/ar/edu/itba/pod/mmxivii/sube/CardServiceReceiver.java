@@ -29,7 +29,7 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 	 */
 	private static final long serialVersionUID = 1L;
 	private Map<UID, UserData> cachedUserData;
-	private Map<UID, UserData> myCachedUserData;
+	private Map<UID, UserData> myUsersCachedUserData;
 	private CardRegistry server;
 	private CardServiceRegistry balancer;
 	private final JChannel channel;
@@ -45,11 +45,12 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 		this.balancer = balancer;
 		this.nodeName = name;
 		this.cachedUserData = new HashMap<UID, UserData>();
-		this.myCachedUserData = new HashMap<UID, UserData>();
+		this.myUsersCachedUserData = new HashMap<UID, UserData>();
 		if (isFirstNode) {
 			if (registered == false) {
 				try {
-					CardServiceImpl cardService = new CardServiceImpl(this);
+					CardServiceImpl cardService = new CardServiceImpl(
+							channel.getAddress(), this);
 					balancer.registerService(cardService);
 					registered = true;
 					initialUpdate = true;
@@ -64,6 +65,7 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 			registered = false;
 			initialUpdate = false;
 		}
+
 	}
 
 	public void receive(Message msg) {
@@ -91,53 +93,42 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 	}
 
 	@Override
-	public void suspect(Address mbr) {
-		try {
-			for (CardService serv : balancer.getServices()) {
-				CardServiceReceiver service = (CardServiceReceiver) serv;
-				if (service.getCurrentAddress().equals(mbr)) {
-					for (CardService c : balancer.getServices()) {
-						if (((CardServiceImpl) c).getService().equals(service)) {
-							balancer.getServices().remove(c);
-							return;
-						}
-					}
-				}
-			}
-		} catch (RemoteException e) {
-			e.printStackTrace();
-		}
-	}
-
-	@Override
 	public void viewAccepted(View v) {
 		if (v.getMembers().size() > 1) {
-			System.out.println("Sent Info to new Node FROM " + nodeName);
 			sendInformationToNewNode(v);
 		}
 	}
 
 	private void sendInformationToNewNode(View v) {
-		Address syncAddress = getNodeAddress(v);
-		if (syncAddress != null)
-			try {
-				Message syncMessage = new Message()
-						.setObject(new pushDataMessage(cachedUserData));
-				channel.send(syncMessage);
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-	}
+		try {
 
-	private Address getNodeAddress(View v) {
-		int i = 0;
-		Address syncAddress = null;
-		while (i < v.getMembers().size()
-				&& v.getMembers().get(i) != channel.getAddress()) {
-			i++;
+			// I DO THIS NEW MAP UID-USERDATA BECAUSE OPERATION IS NOT
+			// SERIALIZABLE AND THROWS
+			// EXCEPTION WHEN SENDING TO OTHER NODES
+			// IM JUST CLEARING OPERATIONS
+			Map<UID, UserData> newInfoToNewNode = new HashMap<UID, UserData>();
+			for (UID uid : newInfoToNewNode.keySet()) {
+				newInfoToNewNode.put(uid, new UserData(newInfoToNewNode
+						.get(uid).getBalance()));
+			}
+			Message syncMessage = new Message().setObject(new pushDataMessage(
+					newInfoToNewNode));
+			System.out.println("Sent Info to all from " + nodeName);
+			Thread.sleep((long) (Math.random() * 300));
+			channel.send(syncMessage);
+			// int i = 0;
+			// while (i < v.getMembers().size()) {
+			// Address nodeAddress = v.getMembers().get(i);
+			// if (nodeAddress != channel.getAddress()) {
+			// channel.send(nodeAddress, syncMessage);
+			// System.out.println("Sent Info to Node " + i + " FROM "
+			// + nodeName);
+			// }
+			// i++;
+			// }
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
-		syncAddress = v.getMembers().get(i - 1);
-		return syncAddress;
 	}
 
 	private void applyUpdateServerOperation(pushServerUpdateMessage p,
@@ -146,26 +137,32 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 	}
 
 	private void applySyncOperation(pushDataMessage s, Address address) {
-		if (!initialUpdate) {
-			cachedUserData.putAll(s.getCachedUserData());
-			try {
-				CardServiceImpl cardService = new CardServiceImpl(this);
-				System.out.println("About to register Node");
+		synchronized (this) {
+			System.out.println("Soy " + nodeName + " y me llego");
+			if (!initialUpdate) {
+				cachedUserData = (s.getCachedUserData());
+				try {
 
-				if (registered == false) {
-					balancer.registerService(cardService);
-					System.out.println("Registered New Node");
-					System.out.println("Size of Nodes "
-							+ balancer.getServices().size());
-					registered = true;
-					initialUpdate = true;
+					if (registered == false) {
+						CardServiceImpl cardService = new CardServiceImpl(
+								channel.getAddress(), this);
+						System.out.println("About to register myself");
+						balancer.registerService(cardService);
+						Thread.sleep(1500);
+						System.out.println("Registered myself");
+						System.out.println("Size of Nodes "
+								+ balancer.getServices().size());
+						registered = true;
+						initialUpdate = true;
+					}
+
+				} catch (Exception e) {
+					registered = false;
+					initialUpdate = false;
+					e.printStackTrace();
 				}
-
-			} catch (Exception e) {
-				registered = false;
-				initialUpdate = false;
-				e.printStackTrace();
 			}
+			System.out.println("Fin del me llego");
 		}
 	}
 
@@ -181,11 +178,6 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 			applyRecharge(r.getUid(), r.getBalance());
 			break;
 		}
-		executor.execute(new Runnable() {
-			public void run() {
-				downloadDataToServer();
-			};
-		});
 
 	}
 
@@ -209,16 +201,19 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 				+ " users in each Node");
 
 		cachedUserData.put(uid, new UserData(amount));
-		myCachedUserData.put(uid, new UserData(amount));
+		myUsersCachedUserData.put(uid, new UserData(amount));
 	}
 
 	private void downloadDataToServer() {
 		System.out.println("Updating Server");
-		for (UID uid : myCachedUserData.keySet()) {
-			for (Operation operation : myCachedUserData.get(uid)
+		for (UID uid : myUsersCachedUserData.keySet()) {
+			for (Operation operation : myUsersCachedUserData.get(uid)
 					.getOperations()) {
 				try {
 					if (!operation.isAlreadyUpdatedInServer()) {
+						System.out.println("Operation " + uid + " Type:"
+								+ operation.getType().toString() + " Amount: $"
+								+ operation.getAmount());
 						server.addCardOperation(uid, operation.getType()
 								.toString(), operation.getAmount());
 						operation.setUpdated();
@@ -228,6 +223,7 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 				}
 			}
 		}
+		System.out.println("********* END UPDATE SERVER ***********");
 	}
 
 	private void applyTravel(UID uid, double amount) {
@@ -258,11 +254,14 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 		try {
 			channel.send(new Message().setObject(c));
 			cachedUserData.put(id, uData);
+			myUsersCachedUserData.put(id, uData);
+
 			// System.out.println("Server Reply CardBalance: "
 			// + uData.getBalance());
 			return uData.getBalance();
 		} catch (Exception e) {
 		}
+		downloadDataToServer();
 		return -1; // SHOULD NOT HAPPEN-
 	}
 
@@ -274,23 +273,28 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 		//
 		UserData uData = cachedUserData.get(id);
 		if (uData != null) {
-			// System.out.println("Cached Travel Reply");
+			System.out.println("Cached Travel");
 			if (uData.getBalance() < amount)
 				return CardRegistry.OPERATION_NOT_PERMITTED_BY_BALANCE;
 
 		} else {
+			System.out.println("Asking Server Travel");
 			uData = new UserData(server.getCardBalance(id));
 		}
 		CacheRequest c = new CacheRequest(OperationType.TRAVEL, id,
 				uData.getBalance());
-		uData.addBalance(-amount);
+		uData.travel(amount);
 		try {
 			channel.send(new Message().setObject(c));
 			cachedUserData.put(id, uData);
+			myUsersCachedUserData.put(id, uData);
+
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		// System.out.println("Server Travel Reply");
+		System.out.println("Travel, UserData Nº" + id);
+		System.out.println("**********************");
+		downloadDataToServer();
 		return uData.getBalance();
 	}
 
@@ -299,27 +303,29 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 			throws RemoteException {
 		// NEED TO CHECK IF AMOUNT ACCOMPLISHES $ARS FORMAT
 		Utils.assertAmount(amount);
-		//
 		UserData uData = cachedUserData.get(id);
 		if (uData != null) {
-			System.out.println("Cached Recharged Reply Nº" + id);
+			System.out.println("Cached Recharge");
 			if (uData.getBalance() + amount > server.MAX_BALANCE)
 				return CardRegistry.OPERATION_NOT_PERMITTED_BY_BALANCE;
 		} else {
+			System.out.println("Asking Server Recharge");
 			uData = new UserData(server.getCardBalance(id));
 		}
 		CacheRequest c = new CacheRequest(OperationType.RECHARGE, id,
 				uData.getBalance());
-		uData.addBalance(amount);
+		uData.charge(amount);
 		try {
 			channel.send(new Message().setObject(c));
 			cachedUserData.put(id, uData);
+			myUsersCachedUserData.put(id, uData);
 
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		// System.out.println("Server Recharge, UserData Nº" + id);
-
+		downloadDataToServer();
+		System.out.println("Recharge, UserData Nº" + id);
+		System.out.println("**********************");
 		return uData.getBalance();
 	}
 
