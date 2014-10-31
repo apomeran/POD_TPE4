@@ -1,6 +1,7 @@
 package ar.edu.itba.pod.mmxivii.sube.client;
 
 import static ar.edu.itba.pod.mmxivii.sube.common.Utils.CARD_CLIENT_BIND;
+import static ar.edu.itba.pod.mmxivii.sube.common.Utils.CARD_REGISTRY_BIND;
 import static com.google.common.base.Preconditions.checkArgument;
 
 import java.rmi.NotBoundException;
@@ -15,73 +16,75 @@ import javax.annotation.Nonnull;
 import ar.edu.itba.pod.mmxivii.sube.common.BaseMain;
 import ar.edu.itba.pod.mmxivii.sube.common.Card;
 import ar.edu.itba.pod.mmxivii.sube.common.CardClient;
+import ar.edu.itba.pod.mmxivii.sube.common.CardRegistry;
 import ar.edu.itba.pod.mmxivii.sube.common.Utils;
 
 public class MainClient extends BaseMain {
 
 	public static void main(@Nonnull String[] args) throws Exception {
-//		args = new String[] { "-host", "192.168.1.116" };
 		final MainClient main = new MainClient(args);
 		main.run();
 	}
 
 	private CardClient cardClient = null;
+	private CardRegistry server = null;
 
 	private MainClient(@Nonnull String[] args) throws NotBoundException {
 		super(args, DEFAULT_CLIENT_OPTIONS);
 		getRegistry();
 		cardClient = Utils.lookupObject(CARD_CLIENT_BIND);
+		server = Utils.lookupObject(CARD_REGISTRY_BIND);
 	}
 
 	private void run() throws RemoteException {
 		System.out.println("Main.run");
-		rechargeTravelAndRechargeAgainTest();
-		insuficcientCreditTravel();
-		heavyLoadtest();
+		basicFunctionalityTest();
+		errorTest();
+		tonsOfData();
 	}
 
-	private void rechargeTravelAndRechargeAgainTest() throws RemoteException {
+	private void basicFunctionalityTest() throws RemoteException {
 		String cardName = randomCardId();
 		Card card = cardClient.newCard(cardName, "");
 		UID cardId = card.getId();
-		float actualBalance = 100;
-		final float travelCost = 10;
-		double rechargeStatus = cardClient.recharge(cardId, "recarga", actualBalance);
+		float currentBalance = 50;
+		final float travelCost = 5;
+		double rechargeStatus = cardClient.recharge(cardId, "initialize", currentBalance);
 		checkArgument(rechargeStatus > 0);
-		for (int i = 0; i < 10; i++) {
+		for (int i = 0; i < 5; i++) {
 			double reportedBalance = cardClient.getCardBalance(cardId);
-			checkArgument((int) reportedBalance == (int) actualBalance);
-			cardClient.travel(cardId, "viaje" + i, travelCost);
-			actualBalance -= travelCost;
-			try {
-				Thread.sleep(2000);
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+			checkArgument((int) reportedBalance == (int) currentBalance);
+			cardClient.travel(cardId, "bus" + i, travelCost);
+			currentBalance -= travelCost;
 		}
-		cardClient.recharge(cardId, "recarga", travelCost);
-		cardClient.travel(cardId, "travelExtraa", travelCost);
-		System.out.println("Test 1 seems OK");
+		try {
+			Thread.sleep(5000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		double finalBalance = server.getCardBalance(cardId);
+		checkArgument((int) finalBalance == (int) currentBalance);
+		System.out.println("Cache numbers are ok and the data is in the server.");
 	}
 
-	private void insuficcientCreditTravel() throws RemoteException {
+	private void errorTest() throws RemoteException {
 		String cardName = randomCardId();
 		Card card = cardClient.newCard(cardName, "");
 		UID cardId = card.getId();
-		cardClient.recharge(cardId, "recarga", 50);
+		cardClient.recharge(cardId, "initialize", 50);
 		try {
 			Thread.sleep(1000);
 		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		double status = cardClient.travel(cardId, "travel", 51);
-		checkArgument(status < 0);
-		System.out.println("Test 2 seems OK");
+		double status = cardClient.travel(cardId, "bus", 51);
+		checkArgument((int)status ==  -4);
+		System.out.println("insufficient money working");
+		status = server.getCardBalance(new UID());
+		checkArgument((int)status ==  -1);
 	}
 
-	private void heavyLoadtest() throws RemoteException {
+	private void tonsOfData() throws RemoteException {
 		new Thread(new ManyTravelingMFS(100)).start();
 		new Thread(new ManyTravelingMFS(100)).start();
 		new Thread(new ManyTravelingMFS(100)).start();
@@ -93,54 +96,54 @@ public class MainClient extends BaseMain {
 
 	private final class ManyTravelingMFS implements Runnable {
 
-		private final int _usersCount;
+		private final int userAmount;
 
-		public ManyTravelingMFS(int usersCount) {
-			_usersCount = usersCount;
+		public ManyTravelingMFS(int userAmount) {
+			this.userAmount = userAmount;
 		}
 
 		@Override
 		public void run() {
 			try {
-				run_();
+				List<UID> cardIds = generateCards();
+				System.out.println("Users Registered");
+				int j = 0;
+				float amount = 10;
+				double status = -5;
+				while (j < 50) {
+					int operationsAmount = randomInt(100, 200);
+					UID cardId = cardIds.get(randomInt(0, cardIds.size()));
+					System.out.println(operationsAmount + "will be made to card: " + cardId);
+					for (int i = 0; i < operationsAmount; i++) {
+						status = cardClient.travel(cardId, "Bus", amount);
+						if (status < 0) {
+							status = cardClient.recharge(cardId, "Recharge", amount * randomInt(5, 10));
+						}
+					}
+					checkArgument((int)status ==  -5);
+					System.out.println("the expected result of card: " + cardId + " is: " + status);
+					Thread.sleep(500);
+					j++;
+				}
 			} catch (Exception e) {
 				e.printStackTrace();
 				System.err.println("Se pudrio todo!");
 			}
 		}
-
-		private void run_() throws Exception {
-			List<UID> cardIds = new ArrayList<UID>(_usersCount);
-			System.out.println("Registering users....");
-			for (int i = 0; i < _usersCount; i++) {
-				String cardName = randomCardId();
-				Card card = cardClient.newCard(cardName, "");
-				cardIds.add(card.getId());
-				if (i % 2 == 0) {
-					System.out.println(Thread.currentThread().getId() + ": " + i / (float) _usersCount + "% Completed");
-				}
-			}
-			System.out.println("Registered " + _usersCount + " new users...");
-			System.out.println("Let the fun begin....");
-			int updateIndex = 0;
-//			while (true) {
-				int operationsCount = randomInt(100, 200);
-				for (int i = 0; i < operationsCount; i++) {
-					UID cardId = cardIds.get(randomInt(0, cardIds.size()));
-					String desc = "operation" + updateIndex + "x" + i;
-					float amount = 10;
-					double status = cardClient.travel(cardId, "Tx" + desc, amount);
-					if (status < 0) {
-						cardClient.recharge(cardId, "Rx" + desc, amount * randomInt(5, 10));
-					}
-					Thread.sleep(1000);
-				}
-				Thread.sleep(500);
-//			}
-		}
-
+		
 		private int randomInt(int min, int max) {
 			return (int) (Math.random() * (max - min) + min);
+		}
+		
+		private List<UID> generateCards() throws RemoteException{
+			List<UID> result = new ArrayList<UID>(userAmount);
+			System.out.println("Registering users....");
+			for (int i = 0; i < userAmount; i++) {
+				String cardName = randomCardId();
+				Card card = cardClient.newCard(cardName, "");
+				result.add(card.getId());
+			}
+			return result;
 		}
 	}
 }
