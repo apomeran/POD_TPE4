@@ -64,7 +64,7 @@ public class CardServiceRegistryImpl extends UnicastRemoteObject implements
 	private CardService tryIfItsAlive(CardService service, UID id) {
 		try {
 			service.getCardBalance(id);
-		} catch (RemoteException e) {
+		} catch (Exception e) {
 			try {
 				unRegisterService(service);
 				return getCardService(id);
