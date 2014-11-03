@@ -120,7 +120,7 @@ public class MainClient extends BaseMain {
 							status = cardClient.recharge(cardId, "Recharge", amount * randomInt(5, 10));
 						}
 					}
-					checkArgument((int)status ==  -5);
+					checkArgument((int)status !=  -5);
 					System.out.println("the expected result of card: " + cardId + " is: " + status);
 					Thread.sleep(500);
 					j++;

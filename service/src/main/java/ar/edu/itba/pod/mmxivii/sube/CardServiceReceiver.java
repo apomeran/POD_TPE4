@@ -5,6 +5,7 @@ import java.rmi.RemoteException;
 import java.rmi.server.UID;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -44,8 +45,8 @@ public class CardServiceReceiver extends ReceiverAdapter implements
 		this.server = server;
 		this.balancer = balancer;
 		this.nodeName = name;
-		this.cachedUserData = new HashMap<UID, UserData>();
-		this.myUsersCachedUserData = new HashMap<UID, UserData>();
+		this.cachedUserData = new ConcurrentHashMap<UID, UserData>();
+		this.myUsersCachedUserData = new ConcurrentHashMap<UID, UserData>();
 		if (isFirstNode) {
 			if (registered == false) {
 				try {
