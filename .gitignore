@@ -3,11 +3,11 @@
 .project
 .settings/
 
-balancer/target/*
-client/target/*
-common/target/*
-server/target/*
-service/target/*
+balancer/target/
+client/target/
+common/target/
+server/target/
+service/target/
 
 # Mac
 .DS_Store
