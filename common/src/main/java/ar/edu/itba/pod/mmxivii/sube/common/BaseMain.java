@@ -41,6 +41,7 @@ public abstract class BaseMain
 		System.setProperty(MAX_THREADS_JAVA_PROPERTY, maxThreads);
 
 		rmiRegistry = Utils.getRegistry(host, port);
+		
 	}
 
 	protected void createRegistry()

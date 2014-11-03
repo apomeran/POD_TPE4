@@ -3,8 +3,13 @@ package ar.edu.itba.pod.mmxivii.sube;
 import static ar.edu.itba.pod.mmxivii.sube.common.Utils.CARD_REGISTRY_BIND;
 import static ar.edu.itba.pod.mmxivii.sube.common.Utils.CARD_SERVICE_REGISTRY_BIND;
 
+import java.lang.reflect.InvocationTargetException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Random;
 import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
 
@@ -20,8 +25,11 @@ import ar.edu.itba.pod.mmxivii.sube.common.CardServiceRegistry;
 import ar.edu.itba.pod.mmxivii.sube.common.Utils;
 
 public class MainCache extends BaseMain {
-	private CardServiceRegistry balancer;
 	private CardRegistry server;
+	private CardServiceRegistry balancer;
+	private static final String CLUSTER_NAME = "cluster";
+	private static List<JChannel> channels = new LinkedList<JChannel>();
+	private static int cacheAmount;
 
 	private MainCache(@Nonnull String[] args) throws RemoteException,
 			NotBoundException {
@@ -29,39 +37,40 @@ public class MainCache extends BaseMain {
 		getRegistry();
 		server = Utils.lookupObject(CARD_REGISTRY_BIND);
 		balancer = Utils.lookupObject(CARD_SERVICE_REGISTRY_BIND);
-		String clusterName = "JGroupsNodeCluster";
-		int nodesCount = 1;
-		while (nodesCount > 0) {
-			try {
-				createNode("node_n" + nodesCount, clusterName);
-				Thread.sleep(TimeUnit.SECONDS.toMillis(5));
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-			nodesCount--;
+		try {
+			createNode("node_n" + new Random().nextInt(), CLUSTER_NAME);
+		} catch (Exception e1) {
+			e1.printStackTrace();
 		}
+		// int nodesCount = 1;
+		// cacheAmount = 0;
+		// while (cacheAmount < nodesCount) {
+		// try {
+		// createNode("node_n" + cacheAmount, CLUSTER_NAME);
+		// Thread.sleep(TimeUnit.SECONDS.toMillis(3));
+		// } catch (InvocationTargetException e) {
+		//
+		// } catch (Exception e) {
+		// e.printStackTrace();
+		// }
+		// cacheAmount++;
+		// }
 
 	}
 
 	private void createNode(String nodeName, String clusterName)
 			throws Exception {
-		// // TODO UNIFY SYNC OPERATIONS IN CHANNEL NODE
-		// // SYNC NODES
-		// JChannel synchronizationNode = new JChannel();
-		// synchronizationNode.setName("sync_" + nodeName);
-		// Synchronizer synchronizer = new Synchronizer(synchronizationNode,
-		// server);
-		// synchronizationNode.setReceiver(synchronizer);
-		// synchronizationNode.connect(clusterName);
-		// CHANNEL NODES
-
-		JChannel channelNode = new JChannel();
-		channelNode.setName(nodeName);
-		CardService cardService = new CardServiceJGroupsImpl(channelNode,
-				server, balancer);
-		channelNode.setReceiver((Receiver) cardService);
-		channelNode.connect(clusterName);
-		// balancer.registerService(myCardService);
+		JChannel channel = new JChannel();
+		channel.setName(nodeName);
+		boolean firstNode = false;
+		if (balancer.getServices().size() == 0)
+			firstNode = true;
+		CardServiceReceiver cardService = new CardServiceReceiver(channel,
+				server, balancer, firstNode, nodeName);
+		channel.setReceiver((Receiver) cardService);
+		channel.connect(clusterName);
+		Thread.sleep(1200);
+		channels.add(channel);
 	}
 
 	public static void main(@Nonnull String[] args) throws Exception {
@@ -76,6 +85,25 @@ public class MainCache extends BaseMain {
 		do {
 			line = scan.next();
 			System.out.println("Service running");
+			if (line.equals("add")) {
+				try {
+					createNode("node_n" + cacheAmount, CLUSTER_NAME);
+					Thread.sleep(TimeUnit.SECONDS.toMillis(3));
+				} catch (InvocationTargetException e) {
+
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+				cacheAmount++;
+			} else if (line.equals("remove")) {
+				int randomChannel = (int) Math.random() * channels.size();
+				JChannel c = channels.get(randomChannel);
+				c.close();
+				System.out.println("Closed channel number " + randomChannel);
+				balancer.unRegisterService((CardService) balancer.getServices()
+						.toArray()[randomChannel]);
+				channels.remove(randomChannel);
+			}
 		} while (!"x".equals(line));
 		scan.close();
 		System.out.println("Service exit.");

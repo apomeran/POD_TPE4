@@ -39,9 +39,11 @@ public class UserData implements Serializable {
 
 	public void travel(double amount) {
 		synchronized (operations) {
-			operations.add(new Operation(OperationType.TRAVEL, amount));
+			operations.add(new Operation(OperationType.TRAVEL, -amount));
 			addBalance(-amount);
 		}
 	}
+
+
 
 }
